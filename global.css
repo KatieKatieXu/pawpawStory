@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ========================================
+   * NIGHT MODE (Default) - Dark navy theme
+   * ======================================== */
+  :root {
+    /* Background colors */
+    --color-background: 30 39 73;           /* #1e2749 - main background */
+    --color-background-card: 43 58 103;     /* #2b3a67 - card/elevated surfaces */
+    
+    /* Accent colors */
+    --color-accent: 255 209 102;            /* #ffd166 - primary accent (yellow) */
+    --color-accent-dark: 230 184 77;        /* #e6b84d - accent border/shadow */
+    
+    /* Text colors */
+    --color-text-primary: 248 249 250;      /* #f8f9fa - primary text (white) */
+    --color-text-secondary: 196 207 219;    /* #c4cfdb - secondary/muted text */
+    
+    /* Border colors */
+    --color-border: 123 143 184;            /* #7b8fb8 - borders and dividers */
+    
+    /* Logo colors */
+    --color-logo-accent: 255 209 102;       /* #ffd166 - "pawpaw" text */
+    --color-logo-text: 248 249 250;         /* #f8f9fa - "Story" text */
+  }
+
+  /* ========================================
+   * DAY MODE - Warm cream theme
+   * ======================================== */
+  .theme-day {
+    /* Background colors */
+    --color-background: 245 237 230;        /* #f5ede6 - main background */
+    --color-background-card: 253 251 248;   /* #fdfbf8 - card/elevated surfaces */
+    
+    /* Accent colors */
+    --color-accent: 255 140 66;             /* #ff8c42 - primary accent (orange) */
+    --color-accent-dark: 230 119 0;         /* #e67700 - accent border/shadow */
+    
+    /* Text colors */
+    --color-text-primary: 61 54 48;         /* #3d3630 - primary text (dark brown) */
+    --color-text-secondary: 138 127 117;    /* #8a7f75 - secondary/muted text */
+    
+    /* Border colors */
+    --color-border: 227 217 207;            /* #e3d9cf - borders and dividers */
+    
+    /* Logo colors */
+    --color-logo-accent: 255 140 66;        /* #ff8c42 - "pawpaw" text */
+    --color-logo-text: 61 54 48;            /* #3d3630 - "Story" text */
+  }
+}
