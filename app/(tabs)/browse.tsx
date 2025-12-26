@@ -1,33 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { getStoriesGroupedByCategory, Story } from '@/constants/stories';
+import { AVAILABLE_TAGS, getStoriesByTag, getStoriesGroupedByCategory, getTagById, STORIES, Story } from '@/constants/stories';
 import { SavedVoice, useSavedVoices } from '@/contexts/SavedVoicesContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
-// Category tags data
-const categoryTags = [
-  'sleepy winds',
-  'cozy house',
-  'hero arc',
-  'fear management',
-  'dreamland',
-  'gentle rain',
-];
 
-// Quick access items
+// Quick access items (first row only)
 const quickAccessItems = [
   { icon: 'time-outline' as const, label: 'Continue', color: '#b88a7b' },
   { icon: 'heart-outline' as const, label: 'Favorites', color: '#c9a892' },
-  { icon: 'trending-up-outline' as const, label: 'Popular', color: '#a89179' },
-  { icon: 'sparkles-outline' as const, label: 'New', color: '#9b9682' },
-  { icon: 'flash-outline' as const, label: 'Quick', color: '#b09a88' },
-  { icon: 'book-outline' as const, label: 'Classics', color: '#8e9c92' },
-  { icon: 'moon-outline' as const, label: 'Bedtime', color: '#c0aa8e' },
-  { icon: 'star-outline' as const, label: "Joey's Fav", color: '#d4af37' },
-  { icon: 'add-outline' as const, label: 'Add', color: '#9b7265' },
+  { icon: 'play-circle-outline' as const, label: 'Ready to Hear', color: '#a89179' },
 ];
 
 // Get story categories from centralized data
@@ -39,11 +24,13 @@ function QuickAccessCard({
   label, 
   color,
   isNightMode,
+  onPress,
 }: { 
   icon: keyof typeof Ionicons.glyphMap; 
   label: string; 
   color: string;
   isNightMode: boolean;
+  onPress?: () => void;
 }) {
   const cardBg = isNightMode ? 'bg-[rgba(43,58,103,0.8)]' : 'bg-[rgba(253,251,248,0.8)]';
   const borderColor = isNightMode ? 'border-pawpaw-border' : 'border-[#e3d9cf]';
@@ -51,7 +38,8 @@ function QuickAccessCard({
 
   return (
     <Pressable
-      className={`flex-1 h-[108px] ${cardBg} rounded-2xl border-b-4 ${borderColor} items-center justify-center`}
+      onPress={onPress}
+      className={`flex-1 h-[108px] ${cardBg} rounded-2xl border-b-4 ${borderColor} items-center justify-center active:opacity-80`}
       style={{
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
@@ -353,12 +341,42 @@ export default function BrowseScreen() {
   
   // State for the voice selector modal
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Tag filter state
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  
+  // Get stories filtered by selected tag
+  const tagFilteredStories = useMemo(() => {
+    if (!selectedTag) return [];
+    return getStoriesByTag(selectedTag);
+  }, [selectedTag]);
+  
+  // Filter stories based on search query
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase().trim();
+    return STORIES.filter(
+      (story) =>
+        story.title.toLowerCase().includes(query) ||
+        story.description.toLowerCase().includes(query) ||
+        story.category.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+  
+  const isSearching = searchQuery.trim().length > 0;
 
   // Theme colors
   const bg = isNightMode ? 'bg-pawpaw-navy' : 'bg-[#f5ede6]';
   const primaryText = isNightMode ? 'text-pawpaw-white' : 'text-[#3d3630]';
+  const secondaryText = isNightMode ? 'text-pawpaw-gray' : 'text-[#8a7f75]';
   const tagBg = isNightMode ? 'bg-pawpaw-navyLight' : 'bg-[#fdfbf8]';
   const tagBorder = isNightMode ? 'border-pawpaw-border' : 'border-[#e3d9cf]';
+  const inputBg = isNightMode ? 'bg-pawpaw-navyLight' : 'bg-[#fdfbf8]';
+  const inputBorder = isNightMode ? 'border-pawpaw-border' : 'border-[#e3d9cf]';
+  const placeholderColor = isNightMode ? '#7b8fb8' : '#8a7f75';
 
   // Handle story card press - opens the voice selector modal
   const handleStoryPress = (story: Story) => {
@@ -399,26 +417,46 @@ export default function BrowseScreen() {
           className="px-6 mb-4"
           contentContainerStyle={{ gap: 8 }}
         >
-          {categoryTags.map((tag) => (
-            <View
-              key={tag}
-              className={`${tagBg} rounded-full px-4 py-3 border-b-[3px] ${tagBorder}`}
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.1,
-                shadowRadius: 3,
-                elevation: 2,
-              }}
-            >
-              <Text
-                className={primaryText}
-                style={{ fontFamily: 'Nunito_400Regular', fontSize: 14 }}
+          {AVAILABLE_TAGS.map((tag) => {
+            const isSelected = selectedTag === tag.id;
+            return (
+              <Pressable
+                key={tag.id}
+                onPress={() => {
+                  setSelectedTag(isSelected ? null : tag.id);
+                  if (!isSelected && searchQuery) {
+                    setSearchQuery('');
+                  }
+                }}
+                className={`rounded-full px-4 py-3 border-b-[3px]`}
+                style={{
+                  backgroundColor: isSelected 
+                    ? tag.color 
+                    : isNightMode ? '#2b3a67' : '#fdfbf8',
+                  borderBottomColor: isSelected
+                    ? `${tag.color}cc`
+                    : isNightMode ? '#3d4a73' : '#e3d9cf',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 3,
+                  elevation: 2,
+                }}
               >
-                {tag}
-              </Text>
-            </View>
-          ))}
+                <Text
+                  style={{ 
+                    fontFamily: 'Nunito_600SemiBold', 
+                    fontSize: 14,
+                    color: isSelected 
+                      ? '#ffffff' 
+                      : isNightMode ? '#f8f9fa' : '#3d3630',
+                  }}
+                >
+                  {tag.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
 
         {/* Quick Access Section */}
@@ -429,30 +467,177 @@ export default function BrowseScreen() {
           >
             Quick Access
           </Text>
-          <View className="gap-3">
-            {/* Row 1 */}
-            <View className="flex-row gap-3">
-              {quickAccessItems.slice(0, 3).map((item) => (
-                <QuickAccessCard key={item.label} {...item} isNightMode={isNightMode} />
-              ))}
-            </View>
-            {/* Row 2 */}
-            <View className="flex-row gap-3">
-              {quickAccessItems.slice(3, 6).map((item) => (
-                <QuickAccessCard key={item.label} {...item} isNightMode={isNightMode} />
-              ))}
-            </View>
-            {/* Row 3 */}
-            <View className="flex-row gap-3">
-              {quickAccessItems.slice(6, 9).map((item) => (
-                <QuickAccessCard key={item.label} {...item} isNightMode={isNightMode} />
-              ))}
-            </View>
+          <View className="flex-row gap-3">
+            {quickAccessItems.map((item) => (
+              <QuickAccessCard 
+                key={item.label} 
+                {...item} 
+                isNightMode={isNightMode}
+                onPress={
+                  item.label === 'Continue'
+                    ? () => router.push('/continue')
+                    : item.label === 'Ready to Hear' 
+                      ? () => router.push('/ready-to-hear')
+                      : item.label === 'Favorites'
+                        ? () => router.push('/favorites')
+                        : undefined
+                }
+              />
+            ))}
           </View>
         </View>
 
-        {/* Story Categories */}
-        {storyCategories.map((categoryGroup) => (
+        {/* Search Bar */}
+        <View className="px-6 mb-6">
+          <View 
+            className={`flex-row items-center ${inputBg} rounded-2xl px-4 py-3 border-b-[3px] ${inputBorder}`}
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.08,
+              shadowRadius: 3,
+              elevation: 2,
+            }}
+          >
+            <Ionicons 
+              name="search" 
+              size={20} 
+              color={placeholderColor} 
+              style={{ marginRight: 10 }}
+            />
+            <TextInput
+              value={searchQuery}
+              onChangeText={(text) => {
+                setSearchQuery(text);
+                if (text.length > 0 && selectedTag) {
+                  setSelectedTag(null);
+                }
+              }}
+              placeholder="Search stories..."
+              placeholderTextColor={placeholderColor}
+              className={`flex-1 ${primaryText}`}
+              style={{ 
+                fontFamily: 'Nunito_400Regular', 
+                fontSize: 15,
+                paddingVertical: 0,
+              }}
+              returnKeyType="search"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery('')} className="ml-2">
+                <Ionicons name="close-circle" size={20} color={placeholderColor} />
+              </Pressable>
+            )}
+          </View>
+        </View>
+
+        {/* Search Results */}
+        {isSearching && (
+          <View className="px-6 mb-8">
+            <Text
+              className={`${primaryText} text-base mb-4`}
+              style={{ fontFamily: 'Nunito_400Regular' }}
+            >
+              {searchResults.length > 0 
+                ? `Found ${searchResults.length} ${searchResults.length === 1 ? 'story' : 'stories'}`
+                : 'No stories found'
+              }
+            </Text>
+            {searchResults.length > 0 ? (
+              <View className="gap-3">
+                {searchResults.map((story) => (
+                  <StoryCard 
+                    key={story.id} 
+                    story={story} 
+                    isNightMode={isNightMode}
+                    onPress={() => handleStoryPress(story)}
+                  />
+                ))}
+              </View>
+            ) : (
+              <View className="items-center py-8">
+                <Ionicons 
+                  name="search-outline" 
+                  size={48} 
+                  color={isNightMode ? '#7b8fb8' : '#8a7f75'} 
+                />
+                <Text
+                  className={`${secondaryText} text-sm text-center mt-4`}
+                  style={{ fontFamily: 'Nunito_400Regular' }}
+                >
+                  No stories match "{searchQuery}"
+                </Text>
+                <Text
+                  className={`${secondaryText} text-xs text-center mt-1`}
+                  style={{ fontFamily: 'Nunito_400Regular' }}
+                >
+                  Try searching by title, description, or category
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Tag Filtered Results */}
+        {!isSearching && selectedTag && (
+          <View className="px-6 mb-8">
+            <View className="flex-row items-center justify-between mb-4">
+              <Text
+                className={`${primaryText} text-base`}
+                style={{ fontFamily: 'Nunito_600SemiBold' }}
+              >
+                {getTagById(selectedTag)?.label} Stories ({tagFilteredStories.length})
+              </Text>
+              <Pressable 
+                onPress={() => setSelectedTag(null)}
+                className="flex-row items-center"
+              >
+                <Text
+                  className={`${secondaryText} text-sm mr-1`}
+                  style={{ fontFamily: 'Nunito_400Regular' }}
+                >
+                  Clear
+                </Text>
+                <Ionicons 
+                  name="close-circle" 
+                  size={16} 
+                  color={isNightMode ? '#7b8fb8' : '#8a7f75'} 
+                />
+              </Pressable>
+            </View>
+            {tagFilteredStories.length > 0 ? (
+              <View className="gap-3">
+                {tagFilteredStories.map((story) => (
+                  <StoryCard 
+                    key={story.id} 
+                    story={story} 
+                    isNightMode={isNightMode}
+                    onPress={() => handleStoryPress(story)}
+                  />
+                ))}
+              </View>
+            ) : (
+              <View className="items-center py-8">
+                <Ionicons 
+                  name="book-outline" 
+                  size={48} 
+                  color={isNightMode ? '#7b8fb8' : '#8a7f75'} 
+                />
+                <Text
+                  className={`${secondaryText} text-sm text-center mt-4`}
+                  style={{ fontFamily: 'Nunito_400Regular' }}
+                >
+                  No stories with this tag yet
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Story Categories - Hidden when searching or filtering by tag */}
+        {!isSearching && !selectedTag && storyCategories.map((categoryGroup) => (
           <View key={categoryGroup.category} className="px-6 mb-8">
             <Text
               className={`${primaryText} text-base mb-4 capitalize`}

@@ -11,6 +11,8 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getStoryById } from '@/constants/stories';
+import { useFavorites } from '@/contexts/FavoritesContext';
+import { usePlaybackProgress } from '@/contexts/PlaybackProgressContext';
 import { useSavedVoices } from '@/contexts/SavedVoicesContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { generateStoryAudio } from '@/services/TextToSpeechService';
@@ -68,6 +70,8 @@ export default function StoryDetailScreen() {
   const { id, voiceId } = useLocalSearchParams<{ id: string; voiceId?: string }>();
   const { isDayMode } = useTheme();
   const { savedVoices } = useSavedVoices();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { saveProgress, getProgress } = usePlaybackProgress();
 
   const storyId = useMemo(() => (typeof id === 'string' ? id : ''), [id]);
   const story = getStoryById(storyId);
@@ -78,7 +82,8 @@ export default function StoryDetailScreen() {
     return savedVoices.find((v) => v.voiceId === voiceId || v.id === voiceId) || null;
   }, [voiceId, savedVoices]);
 
-  const [isFavorite, setIsFavorite] = useState(false);
+  // Check if this story is favorited
+  const isStoryFavorite = storyId ? isFavorite(storyId) : false;
   const [speed, setSpeed] = useState<1 | 1.25 | 1.5 | 2>(1);
 
   // Audio state
@@ -89,6 +94,9 @@ export default function StoryDetailScreen() {
   const [generatedAudioUri, setGeneratedAudioUri] = useState<string | null>(null);
   const [positionMs, setPositionMs] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
+
+  // Get saved progress for this story
+  const savedProgressRef = useRef(getProgress(storyId));
 
   // Animated progress bar
   const progressWidth = useSharedValue(0);
@@ -104,6 +112,24 @@ export default function StoryDetailScreen() {
   useEffect(() => {
     progressWidth.value = withTiming(progress01 * 100, { duration: 100 });
   }, [progress01, progressWidth]);
+
+  // Configure audio to use speaker on mount
+  useEffect(() => {
+    const configureAudio = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          playThroughEarpieceAndroid: false, // Use speaker on Android
+          allowsRecordingIOS: false, // Prevents routing to earpiece on iOS
+        });
+        console.log('[Audio] Configured to use speaker');
+      } catch (error) {
+        console.error('[Audio] Failed to configure audio mode:', error);
+      }
+    };
+    configureAudio();
+  }, []);
 
   // Audio playback status callback
   const onPlaybackStatusUpdate = useCallback((status: { isLoaded: boolean; positionMillis?: number; durationMillis?: number; isPlaying?: boolean; didJustFinish?: boolean }) => {
@@ -169,6 +195,34 @@ export default function StoryDetailScreen() {
       }
     };
   }, [story?.audioUrl, generatedAudioUri, onPlaybackStatusUpdate, speed]);
+
+  // Save progress when component unmounts or when user navigates away
+  useEffect(() => {
+    return () => {
+      // Save progress when leaving the screen
+      if (storyId && durationMs > 0) {
+        saveProgress(storyId, positionMs, durationMs, voiceId as string | undefined);
+      }
+    };
+  }, [storyId, positionMs, durationMs, voiceId, saveProgress]);
+
+  // Restore saved position when audio loads (if we have saved progress)
+  useEffect(() => {
+    const restoreSavedPosition = async () => {
+      if (soundRef.current && savedProgressRef.current && savedProgressRef.current.positionMs > 0) {
+        try {
+          await soundRef.current.setPositionAsync(savedProgressRef.current.positionMs);
+          savedProgressRef.current = undefined; // Clear after restoring
+        } catch (error) {
+          console.log('Could not restore position:', error);
+        }
+      }
+    };
+    
+    if (durationMs > 0 && savedProgressRef.current) {
+      restoreSavedPosition();
+    }
+  }, [durationMs]);
 
   // Update playback rate when speed changes
   useEffect(() => {
@@ -379,15 +433,15 @@ export default function StoryDetailScreen() {
             {/* Buttons row: Favorite / Play / Speed */}
             <View className="flex-row items-center justify-between mt-6">
               <Pressable
-                onPress={() => setIsFavorite((v) => !v)}
+                onPress={() => storyId && toggleFavorite(storyId)}
                 className={`w-14 h-14 rounded-2xl items-center justify-center ${
                   isNightMode ? 'bg-pawpaw-navyLight/80' : 'bg-[#e3d9cf]'
                 }`}
               >
                 <Ionicons
-                  name={isFavorite ? 'heart' : 'heart-outline'}
+                  name={isStoryFavorite ? 'heart' : 'heart-outline'}
                   size={24}
-                  color={isFavorite ? (isNightMode ? '#ffd166' : '#ff8c42') : (isNightMode ? '#c4cfdb' : '#8a7f75')}
+                  color={isStoryFavorite ? (isNightMode ? '#ffd166' : '#ff8c42') : (isNightMode ? '#c4cfdb' : '#8a7f75')}
                 />
                 <Text className={`${secondaryText} text-[10px] mt-1`} style={{ fontFamily: 'Nunito_400Regular' }}>
                   Fav

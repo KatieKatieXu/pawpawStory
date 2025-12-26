@@ -56,10 +56,10 @@ export default function WelcomeScreen() {
         </View>
 
         {/* Bottom Buttons */}
-        <View className="pb-8 gap-3">
+        <View className="pb-28 gap-3">
           {/* Get Started Button */}
           <Pressable
-            onPress={() => router.push('/dashboard')}
+            onPress={() => router.replace('/(tabs)/browse')}
             className={`${buttonBg} rounded-2xl py-[18px] border-b-[4px] ${buttonBorder} active:opacity-90`}
           >
             <Text

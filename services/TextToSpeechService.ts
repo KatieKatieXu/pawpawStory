@@ -19,8 +19,8 @@ import {
 // API Configuration
 const ELEVENLABS_TTS_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
 
-// ElevenLabs API Key (same as VoiceCloningService)
-const API_KEY = 'sk_f01cc10ebae3b08ec0b0a06697b04b39c6d73585b900ffc7';
+// ElevenLabs API Key from environment variable
+const API_KEY = process.env.EXPO_PUBLIC_ELEVENLABS_API_KEY || '';
 
 // ElevenLabs has a character limit per request (around 5000 for most plans)
 const MAX_TEXT_LENGTH = 5000;

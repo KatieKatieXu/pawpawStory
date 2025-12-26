@@ -43,6 +43,9 @@ app-example
 /android
 
 
-# node_modules
+# .gitignore
+node_modules/
+.expo/
+dist/
 .env
-.DS_Store
+.env.local

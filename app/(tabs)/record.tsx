@@ -80,11 +80,10 @@ export default function RecordScreen() {
           );
         }
         
-        // Configure audio mode for recording - use speaker for playback
+        // Configure audio mode for recording
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: true,
           playsInSilentModeIOS: true,
-          playThroughEarpieceAndroid: false, // Use speaker for louder audio
         });
       } catch (error) {
         console.error('Error requesting permission:', error);
@@ -317,11 +316,12 @@ export default function RecordScreen() {
         soundRef.current = null;
       }
 
-      // Set audio mode for playback - use speaker for louder audio
+      // Set audio mode for playback - use speaker for louder output
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
-        playThroughEarpieceAndroid: false, // Use speaker for louder audio
+        staysActiveInBackground: false,
+        playThroughEarpieceAndroid: false, // Use speaker on Android
       });
 
       // Load and play the audio
@@ -342,7 +342,7 @@ export default function RecordScreen() {
           Audio.setAudioModeAsync({
             allowsRecordingIOS: true,
             playsInSilentModeIOS: true,
-            playThroughEarpieceAndroid: false, // Use speaker for louder audio
+            playThroughEarpieceAndroid: false,
           });
         }
       });

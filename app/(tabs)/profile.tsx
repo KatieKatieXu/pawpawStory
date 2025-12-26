@@ -2,21 +2,49 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 // Profile menu items
 const menuItems = [
-  { icon: 'person-outline' as const, label: 'Edit Profile', route: null },
-  { icon: 'notifications-outline' as const, label: 'Notifications', route: null },
-  { icon: 'heart-outline' as const, label: 'Favorite Stories', route: null },
-  { icon: 'mic-outline' as const, label: 'My Recordings', route: null },
-  { icon: 'settings-outline' as const, label: 'Settings', route: null },
-  { icon: 'help-circle-outline' as const, label: 'Help & Support', route: null },
+  { icon: 'person-outline' as const, label: 'Edit Profile', route: '/edit-profile' },
 ];
 
 export default function ProfileScreen() {
   const { isDayMode } = useTheme();
+  const { user, isAuthenticated, signOut } = useAuth();
   const isNightMode = !isDayMode;
+
+  // Format the join date
+  const formatJoinDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      year: 'numeric' 
+    });
+  };
+
+  // Get user display name (prioritize Apple name, then full_name, then email)
+  const getUserName = () => {
+    // Check for Apple name first (stored during Apple Sign-In)
+    if (user?.user_metadata?.apple_name) {
+      return user.user_metadata.apple_name;
+    }
+    // Then check for full_name (from signup or Apple)
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name;
+    }
+    // Fallback to email prefix
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'User';
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace('/');
+  };
 
   // Theme colors
   const bg = isNightMode ? 'bg-pawpaw-navy' : 'bg-[#f5ede6]';
@@ -55,38 +83,57 @@ export default function ProfileScreen() {
                 <Ionicons name="person" size={48} color={iconColor} />
               </View>
 
-              <Text
-                className={`${primaryText} text-2xl`}
-                style={{ fontFamily: 'Nunito_800ExtraBold' }}
-              >
-                Guest User
-              </Text>
-              <Text
-                className={`${secondaryText} text-base mt-1`}
-                style={{ fontFamily: 'Nunito_400Regular' }}
-              >
-                Sign in to save your progress
-              </Text>
+              {isAuthenticated && user ? (
+                <>
+                  <Text
+                    className={`${primaryText} text-2xl`}
+                    style={{ fontFamily: 'Nunito_800ExtraBold' }}
+                  >
+                    Hello, {getUserName()}
+                  </Text>
+                  <Text
+                    className={`${secondaryText} text-base mt-1`}
+                    style={{ fontFamily: 'Nunito_400Regular' }}
+                  >
+                    Joined since {formatJoinDate(user.created_at)}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text
+                    className={`${primaryText} text-2xl`}
+                    style={{ fontFamily: 'Nunito_800ExtraBold' }}
+                  >
+                    Guest User
+                  </Text>
+                  <Text
+                    className={`${secondaryText} text-base mt-1`}
+                    style={{ fontFamily: 'Nunito_400Regular' }}
+                  >
+                    Sign in to save your progress
+                  </Text>
 
-              {/* Sign In Button */}
-              <Pressable
-                onPress={() => router.push('/login')}
-                className={`mt-6 px-8 py-3 rounded-full ${isNightMode ? 'bg-pawpaw-yellow' : 'bg-[#ff8c42]'}`}
-                style={{
-                  shadowColor: isNightMode ? '#ffd166' : '#ff8c42',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 4,
-                }}
-              >
-                <Text
-                  className={`text-base ${isNightMode ? 'text-pawpaw-navy' : 'text-white'}`}
-                  style={{ fontFamily: 'Nunito_700Bold' }}
-                >
-                  Sign In
-                </Text>
-              </Pressable>
+                  {/* Sign In Button */}
+                  <Pressable
+                    onPress={() => router.push('/login')}
+                    className={`mt-6 px-8 py-3 rounded-full ${isNightMode ? 'bg-pawpaw-yellow' : 'bg-[#ff8c42]'}`}
+                    style={{
+                      shadowColor: isNightMode ? '#ffd166' : '#ff8c42',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 4,
+                    }}
+                  >
+                    <Text
+                      className={`text-base ${isNightMode ? 'text-pawpaw-navy' : 'text-white'}`}
+                      style={{ fontFamily: 'Nunito_700Bold' }}
+                    >
+                      Sign In
+                    </Text>
+                  </Pressable>
+                </>
+              )}
             </View>
           </View>
 
@@ -162,6 +209,7 @@ export default function ProfileScreen() {
               {menuItems.map((item) => (
                 <Pressable
                   key={item.label}
+                  onPress={() => item.route && router.push(item.route as any)}
                   className={`flex-row items-center ${cardBg} rounded-2xl p-4 border-b-4 ${borderColor}`}
                   style={{
                     shadowColor: '#000',
@@ -193,25 +241,27 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* Logout Button */}
-          <View className="px-6 mt-8">
-            <Pressable
-              onPress={() => router.replace('/')}
-              className={`flex-row items-center justify-center py-4 rounded-2xl border-2 ${borderColor}`}
-            >
-              <Ionicons
-                name="log-out-outline"
-                size={20}
-                color={isNightMode ? '#c4cfdb' : '#8a7f75'}
-              />
-              <Text
-                className={`${secondaryText} text-base ml-2`}
-                style={{ fontFamily: 'Nunito_700Bold' }}
+          {/* Logout Button - Only show when authenticated */}
+          {isAuthenticated && (
+            <View className="px-6 mt-8">
+              <Pressable
+                onPress={handleSignOut}
+                className={`flex-row items-center justify-center py-4 rounded-2xl border-2 ${borderColor}`}
               >
-                Sign Out
-              </Text>
-            </Pressable>
-          </View>
+                <Ionicons
+                  name="log-out-outline"
+                  size={20}
+                  color={isNightMode ? '#c4cfdb' : '#8a7f75'}
+                />
+                <Text
+                  className={`${secondaryText} text-base ml-2`}
+                  style={{ fontFamily: 'Nunito_700Bold' }}
+                >
+                  Sign Out
+                </Text>
+              </Pressable>
+            </View>
+          )}
         </ScrollView>
     </View>
   );

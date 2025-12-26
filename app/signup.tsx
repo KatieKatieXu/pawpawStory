@@ -25,13 +25,15 @@ function AppleLogo({ color }: { color: string }) {
   );
 }
 
-export default function LoginScreen() {
+export default function SignupScreen() {
   const { isDayMode } = useTheme();
-  const { signIn, signInWithApple } = useAuth();
+  const { signUp, signInWithApple } = useAuth();
   const isNightMode = !isDayMode;
 
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
@@ -49,30 +51,49 @@ export default function LoginScreen() {
   const buttonBorder = isNightMode ? 'border-pawpaw-yellowDark' : 'border-[#e67700]';
   const buttonText = isNightMode ? 'text-pawpaw-navy' : 'text-white';
   const iconColor = isNightMode ? '#7b8fb8' : '#8a7f75';
+  const cardBg = isNightMode ? 'bg-pawpaw-navyLight' : 'bg-[#fdfbf8]';
+  const borderColor = isNightMode ? 'border-pawpaw-border' : 'border-[#e3d9cf]';
 
-  const handleLogin = async () => {
+  const handleSignup = async () => {
+    if (!name.trim()) {
+      Alert.alert('Error', 'Please enter your name');
+      return;
+    }
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter your email');
       return;
     }
     if (!password) {
-      Alert.alert('Error', 'Please enter your password');
+      Alert.alert('Error', 'Please enter a password');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
     setIsLoading(true);
-    const { error } = await signIn(email.trim(), password);
+    const { error } = await signUp(email.trim(), password, name.trim());
     setIsLoading(false);
 
     if (error) {
-      Alert.alert('Login Failed', error.message);
+      Alert.alert('Sign Up Failed', error.message);
     } else {
-      router.replace('/(tabs)/browse');
+      Alert.alert(
+        'Check Your Email',
+        'We sent you a confirmation email. Please verify your email to complete sign up.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/login'),
+          },
+        ]
+      );
     }
-  };
-
-  const handleForgotPassword = () => {
-    router.push('/forgot-password');
   };
 
   const handleAppleSignIn = async () => {
@@ -100,26 +121,58 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Back Button */}
+          <View className="px-6 pt-2">
+            <Pressable
+              onPress={() => router.back()}
+              className={`w-11 h-11 rounded-full items-center justify-center ${cardBg} border-b-[3px] ${borderColor}`}
+            >
+              <Ionicons name="arrow-back" size={20} color={isNightMode ? '#f8f9fa' : '#3d3630'} />
+            </Pressable>
+          </View>
+
           {/* Content */}
           <View className="flex-1 px-6">
             {/* Title Section */}
-            <View className="mt-8 mb-6">
+            <View className="mt-4 mb-6">
               <Text
                 className={`${primaryText} text-[32px] leading-[48px]`}
                 style={{ fontFamily: 'Nunito_800ExtraBold' }}
               >
-                Log in
+                Create Account
               </Text>
               <Text
                 className={`${secondaryText} text-base mt-1`}
                 style={{ fontFamily: 'Nunito_400Regular' }}
               >
-                Welcome back to pawpawStory!
+                Join pawpawStory and start your journey!
               </Text>
             </View>
 
             {/* Form Section */}
-            <View className="gap-6">
+            <View className="gap-5">
+              {/* Name Input */}
+              <View className="gap-2">
+                <Text
+                  className={`${primaryText} text-sm`}
+                  style={{ fontFamily: 'Nunito_700Bold' }}
+                >
+                  Full Name
+                </Text>
+                <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder}`}>
+                  <TextInput
+                    className={`px-4 py-3 ${inputText} text-base`}
+                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    placeholder="Enter your name"
+                    placeholderTextColor={placeholderColor}
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                    editable={!isLoading}
+                  />
+                </View>
+              </View>
+
               {/* Email Input */}
               <View className="gap-2">
                 <Text
@@ -156,7 +209,7 @@ export default function LoginScreen() {
                   <TextInput
                     className={`flex-1 px-4 py-3 ${inputText} text-base`}
                     style={{ fontFamily: 'Nunito_400Regular' }}
-                    placeholder="Enter your password"
+                    placeholder="Create a password"
                     placeholderTextColor={placeholderColor}
                     value={password}
                     onChangeText={setPassword}
@@ -174,25 +227,39 @@ export default function LoginScreen() {
                     />
                   </Pressable>
                 </View>
+                <Text
+                  className={`${secondaryText} text-xs`}
+                  style={{ fontFamily: 'Nunito_400Regular' }}
+                >
+                  Must be at least 6 characters
+                </Text>
               </View>
 
-              {/* Forgot Password Link */}
-              <Pressable 
-                onPress={handleForgotPassword}
-                className="self-end active:opacity-70"
-                disabled={isLoading}
-              >
+              {/* Confirm Password Input */}
+              <View className="gap-2">
                 <Text
-                  className={`${accentColor} text-sm`}
+                  className={`${primaryText} text-sm`}
                   style={{ fontFamily: 'Nunito_700Bold' }}
                 >
-                  Forgot password?
+                  Confirm Password
                 </Text>
-              </Pressable>
+                <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder}`}>
+                  <TextInput
+                    className={`px-4 py-3 ${inputText} text-base`}
+                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    placeholder="Confirm your password"
+                    placeholderTextColor={placeholderColor}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showPassword}
+                    editable={!isLoading}
+                  />
+                </View>
+              </View>
 
-              {/* Login Button */}
+              {/* Sign Up Button */}
               <Pressable
-                onPress={handleLogin}
+                onPress={handleSignup}
                 disabled={isLoading || isAppleLoading}
                 className={`${buttonBg} rounded-2xl py-[18px] border-b-4 ${buttonBorder} active:opacity-90 mt-4`}
                 style={{
@@ -211,7 +278,7 @@ export default function LoginScreen() {
                     className={`${buttonText} text-base text-center tracking-wide`}
                     style={{ fontFamily: 'Nunito_800ExtraBold' }}
                   >
-                    LOG IN
+                    CREATE ACCOUNT
                   </Text>
                 )}
               </Pressable>
@@ -253,16 +320,16 @@ export default function LoginScreen() {
                 </>
               )}
 
-              {/* Sign Up Link */}
-              <View className="flex-row justify-center items-center">
+              {/* Login Link */}
+              <View className="flex-row justify-center items-center pb-8">
                 <Text
                   className={`${secondaryText} text-[15px]`}
                   style={{ fontFamily: 'Nunito_400Regular' }}
                 >
-                  Don't have an account?
+                  Already have an account?
                 </Text>
                 <Pressable 
-                  onPress={() => router.push('/signup')} 
+                  onPress={() => router.push('/login')} 
                   className="active:opacity-70"
                   disabled={isLoading}
                 >
@@ -270,33 +337,10 @@ export default function LoginScreen() {
                     className={`${accentColor} text-[15px] ml-1`}
                     style={{ fontFamily: 'Nunito_700Bold' }}
                   >
-                    Sign up
+                    Log in
                   </Text>
                 </Pressable>
               </View>
-            </View>
-
-            {/* Skip for now */}
-            <View className="py-8">
-              <Pressable 
-                onPress={() => router.replace('/(tabs)/browse')} 
-                className="active:opacity-70"
-              >
-                <Text className="text-center">
-                  <Text
-                    className={`${accentColor} text-[15px]`}
-                    style={{ fontFamily: 'Nunito_700Bold' }}
-                  >
-                    Skip
-                  </Text>
-                  <Text
-                    className={`${secondaryText} text-[15px]`}
-                    style={{ fontFamily: 'Nunito_400Regular' }}
-                  >
-                    {' '}for now, sign up later
-                  </Text>
-                </Text>
-              </Pressable>
             </View>
           </View>
         </ScrollView>
@@ -304,3 +348,4 @@ export default function LoginScreen() {
     </View>
   );
 }
+

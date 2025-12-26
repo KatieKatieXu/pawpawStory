@@ -9,6 +9,9 @@ import { View } from 'react-native';
 import 'react-native-reanimated';
 
 import { GlobalHeader } from '@/components/GlobalHeader';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { FavoritesProvider } from '@/contexts/FavoritesContext';
+import { PlaybackProgressProvider } from '@/contexts/PlaybackProgressContext';
 import { SavedVoicesProvider } from '@/contexts/SavedVoicesContext';
 import { ThemeContextProvider, useTheme } from '@/contexts/ThemeContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -64,9 +67,15 @@ export default function RootLayout() {
 
   return (
     <ThemeContextProvider>
-      <SavedVoicesProvider>
-        <RootLayoutContent />
-      </SavedVoicesProvider>
+      <AuthProvider>
+        <SavedVoicesProvider>
+          <FavoritesProvider>
+            <PlaybackProgressProvider>
+              <RootLayoutContent />
+            </PlaybackProgressProvider>
+          </FavoritesProvider>
+        </SavedVoicesProvider>
+      </AuthProvider>
     </ThemeContextProvider>
   );
 }

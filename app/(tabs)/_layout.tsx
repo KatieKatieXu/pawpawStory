@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -86,6 +86,7 @@ export default function TabLayout() {
         name="index"
         options={{
           href: null, // Hide from tab bar
+          tabBarStyle: { display: 'none' }, // Hide entire tab bar on this screen
         }}
       />
       <Tabs.Screen

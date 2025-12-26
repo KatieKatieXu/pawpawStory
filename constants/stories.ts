@@ -6,11 +6,28 @@ export interface Story {
   coverImage: any; // Can be require() or { uri: string }
   audioUrl: string;
   duration: string;
-  tag: string;
+  tag: string; // Legacy single tag
+  tags: string[]; // Multiple tags for filtering
   category: string;
   narrator: string;
   textContent: string; // Full story text for TTS audio generation
 }
+
+// Available tags for filtering
+export const AVAILABLE_TAGS = [
+  { id: 'bedtime', label: '🌙 Bedtime', color: '#7b68ee' },
+  { id: 'adventure', label: '🗺️ Adventure', color: '#ff6b6b' },
+  { id: 'animals', label: '🐾 Animals', color: '#4ecdc4' },
+  { id: 'magic', label: '✨ Magic', color: '#f7b731' },
+  { id: 'bravery', label: '💪 Bravery', color: '#eb3b5a' },
+  { id: 'kindness', label: '💝 Kindness', color: '#fc5c65' },
+  { id: 'lessons', label: '📚 Life Lessons', color: '#45aaf2' },
+  { id: 'funny', label: '😄 Funny', color: '#fed330' },
+  { id: 'fairy-tale', label: '👸 Fairy Tale', color: '#a55eea' },
+  { id: 'short', label: '⏱️ Quick Read', color: '#26de81' },
+] as const;
+
+export type TagId = typeof AVAILABLE_TAGS[number]['id'];
 
 export const STORIES: Story[] = [
   // ============================================
@@ -24,6 +41,7 @@ export const STORIES: Story[] = [
     audioUrl: '',
     duration: '5:00',
     tag: 'classics',
+    tags: ['animals', 'lessons', 'bravery'],
     category: 'Classic Tales',
     narrator: 'Your Voice',
     textContent: `Once upon a time, there were three little pigs who left home to build their own houses. The first little pig built his house out of straw because it was quick and easy. The second little pig built his house out of sticks, which took a bit longer. But the third little pig worked very hard and built his house out of strong bricks, even though it took many days.
@@ -40,6 +58,7 @@ The wolf tried his hardest to blow down the brick house, but no matter how much 
     audioUrl: '',
     duration: '5:00',
     tag: 'classics',
+    tags: ['adventure', 'lessons', 'bravery', 'fairy-tale'],
     category: 'Classic Tales',
     narrator: 'Your Voice',
     textContent: `Once upon a time, there was a sweet little girl who always wore a beautiful red hood, so everyone called her Little Red Riding Hood. One sunny day, her mother asked her to take a basket of treats to her grandmother who lived in a cottage in the forest. "Stay on the path and don't talk to strangers," her mother said, and Little Red Riding Hood promised she would.
@@ -56,6 +75,7 @@ When Little Red Riding Hood arrived, she noticed something was different about h
     audioUrl: '',
     duration: '5:00',
     tag: 'classics',
+    tags: ['animals', 'adventure', 'funny', 'lessons'],
     category: 'Classic Tales',
     narrator: 'Your Voice',
     textContent: `Once upon a time, a little girl named Goldilocks was walking through the forest when she discovered a cozy cottage. She knocked on the door, but no one answered because the three bears who lived there had gone for a walk while their porridge cooled. Curious Goldilocks pushed open the door and went inside.
@@ -72,6 +92,7 @@ Soon, the three bears came home and found their porridge eaten, their chairs mov
     audioUrl: '',
     duration: '4:00',
     tag: 'fables',
+    tags: ['animals', 'lessons', 'funny', 'short'],
     category: 'Classic Tales',
     narrator: 'Your Voice',
     textContent: `Once upon a time, there was a hare who loved to brag about how fast he could run. He would tease all the other animals, especially the slow tortoise. One day, the tortoise had enough and said, "I challenge you to a race!" All the animals laughed, but the hare agreed, thinking it would be an easy win.
@@ -88,6 +109,7 @@ The hare slept for a long time. When he finally woke up, he stretched and yawned
     audioUrl: '',
     duration: '6:00',
     tag: 'adventure',
+    tags: ['adventure', 'magic', 'bravery', 'fairy-tale'],
     category: 'Classic Tales',
     narrator: 'Your Voice',
     textContent: `Once upon a time, a boy named Jack lived with his mother in a tiny cottage. They were very poor and had nothing left but their old cow. "Take the cow to market and sell her," his mother said. On the way, Jack met a strange old man who offered him magic beans for the cow. Jack couldn't resist and made the trade. When he got home, his mother was so upset that she threw the beans out the window.
@@ -104,6 +126,7 @@ When the giant woke up and discovered his goose was gone, he chased Jack down th
     audioUrl: '',
     duration: '6:00',
     tag: 'fairy tales',
+    tags: ['magic', 'kindness', 'fairy-tale'],
     category: 'Classic Tales',
     narrator: 'Your Voice',
     textContent: `Once upon a time, there lived a kind and beautiful girl named Cinderella. After her father passed away, she lived with her stepmother and two stepsisters who were very unkind to her. They made her do all the chores while they wore fine clothes and went to parties. One day, the prince announced a grand ball, and Cinderella wished with all her heart that she could go too.
@@ -120,6 +143,7 @@ At the ball, Cinderella danced with the prince all night long. They fell in love
     audioUrl: '',
     duration: '5:00',
     tag: 'classics',
+    tags: ['animals', 'kindness', 'lessons'],
     category: 'Classic Tales',
     narrator: 'Your Voice',
     textContent: `Once upon a time, on a peaceful farm, a mother duck sat on her nest waiting for her eggs to hatch. One by one, fuzzy yellow ducklings popped out. But the last egg was bigger, and when it finally cracked open, out came a duckling who looked very different. He was gray and clumsy, and the other animals called him the "ugly duckling." This made him very sad.
@@ -136,6 +160,7 @@ Gathering his courage, the duckling swam toward the swans. As he lowered his hea
     audioUrl: '',
     duration: '6:00',
     tag: 'adventure',
+    tags: ['adventure', 'bravery', 'fairy-tale'],
     category: 'Classic Tales',
     narrator: 'Your Voice',
     textContent: `Once upon a time, two children named Hansel and Gretel lived at the edge of a great forest with their father, a poor woodcutter. One day, they wandered too deep into the forest and couldn't find their way home. They walked and walked until they discovered an amazing sight—a little cottage made entirely of candy and gingerbread! Hungry from their journey, they began to nibble on the house.
@@ -152,6 +177,7 @@ One day, when the witch wasn't paying attention, brave Gretel tricked her and lo
     audioUrl: '',
     duration: '3:00',
     tag: 'fables',
+    tags: ['animals', 'kindness', 'lessons', 'short'],
     category: 'Classic Tales',
     narrator: 'Your Voice',
     textContent: `Once upon a time, a mighty lion was taking a nap in the warm sunshine when a tiny mouse accidentally ran across his nose. The lion woke up with a ROAR and caught the little mouse in his huge paw. "Please don't eat me!" squeaked the mouse. "If you let me go, I promise to help you someday." The lion laughed at the idea of a tiny mouse helping him, but he was feeling kind, so he let the mouse go.
@@ -168,6 +194,7 @@ The little mouse heard the lion's cries and came running as fast as her tiny leg
     audioUrl: '',
     duration: '5:00',
     tag: 'fables',
+    tags: ['funny', 'lessons'],
     category: 'Classic Tales',
     narrator: 'Your Voice',
     textContent: `Once upon a time, there was an emperor who loved fancy clothes more than anything else in the world. He had a different outfit for every hour of the day! One day, two tricky tailors came to the palace and said, "We can make you the most magnificent clothes in the world—clothes so special that only wise people can see them. Foolish people will see nothing at all." The vain emperor gave them bags of gold to make this magical outfit.
@@ -188,6 +215,7 @@ The emperor marched through the streets in his underwear, and all the grown-ups 
     audioUrl: 'https://drive.google.com/file/d/1Wam5mj0zToXGkD7hX2GNNIbubRHCCmp-/view?usp=sharing',
     duration: '10:00',
     tag: 'dreamland',
+    tags: ['bedtime', 'animals', 'bravery', 'magic'],
     category: 'Bedtime Stories',
     narrator: 'Pat Zimmerman',
     textContent: `Once upon a time, there was a little bird who dreamed of flying higher than any bird had ever flown before. Every day, she would watch the clouds float by and imagine what it would be like to touch them. The other birds told her it was impossible, but she never stopped believing.
@@ -204,6 +232,7 @@ When she returned to earth, all the other birds gathered around in amazement. "H
     audioUrl: 'https://drive.google.com/file/d/1x1WIObO_tVZlOBoXDd8dUkQtSk5LKJVq/view?usp=sharing',
     duration: '8:00',
     tag: 'sleepy winds',
+    tags: ['bedtime', 'magic'],
     category: 'Bedtime Stories',
     narrator: 'Starlight Voice',
     textContent: `High above the sleeping town, the moon began to sing a gentle lullaby. Her soft silver light drifted down through bedroom windows, wrapping children in warmth and peace. The stars twinkled along to the melody, each one adding its own tiny sparkle to the song.
@@ -220,6 +249,7 @@ As the lullaby continued, every child drifted off to dreamland, safe and loved. 
     audioUrl: 'https://drive.google.com/file/d/1x1WIObO_tVZlOBoXDd8dUkQtSk5LKJVq/view?usp=sharing',
     duration: '12:00',
     tag: 'cozy house',
+    tags: ['bedtime', 'animals'],
     category: 'Bedtime Stories',
     narrator: 'Forest Voice',
     textContent: `As the sun painted the sky in shades of orange and pink, all the animals in the Sleepy Forest began to yawn. The little rabbits hopped back to their burrow, the squirrels curled up in their tree houses, and the deer found soft spots among the ferns to rest their tired legs.
@@ -236,6 +266,7 @@ One by one, the forest creatures closed their eyes. The trees swayed gently in t
     audioUrl: 'https://drive.google.com/file/d/1x1WIObO_tVZlOBoXDd8dUkQtSk5LKJVq/view?usp=sharing',
     duration: '15:00',
     tag: 'classics',
+    tags: ['adventure', 'magic', 'funny', 'fairy-tale'],
     category: 'Abridged Classics',
     narrator: 'Classic Voice',
     textContent: `One sunny afternoon, a curious girl named Alice was sitting by the riverbank when she spotted a white rabbit wearing a waistcoat and carrying a pocket watch. "I'm late! I'm late!" the rabbit cried, hopping toward a hole in the ground. Without thinking twice, Alice followed him and tumbled down, down, down into a magical place called Wonderland.
@@ -274,3 +305,26 @@ export function getStoriesGroupedByCategory(): { category: string; stories: Stor
 export function getClassicTales(): Story[] {
   return STORIES.filter(story => story.category === 'Classic Tales');
 }
+
+// Get "Ready to Hear" stories - pre-recorded by real people (have audioUrl)
+export function getReadyToHearStories(): Story[] {
+  return STORIES.filter(story => story.audioUrl && story.audioUrl.length > 0);
+}
+
+// Get stories for voice cloning (no pre-recorded audio)
+export function getVoiceCloningStories(): Story[] {
+  return STORIES.filter(story => !story.audioUrl || story.audioUrl.length === 0);
+}
+
+// Get stories by tag
+export function getStoriesByTag(tagId: string): Story[] {
+  return STORIES.filter(story => story.tags.includes(tagId));
+}
+
+// Get tag info by ID
+export function getTagById(tagId: string) {
+  return AVAILABLE_TAGS.find(tag => tag.id === tagId);
+}
+
+// Export all stories for search
+export const ALL_STORIES = STORIES;

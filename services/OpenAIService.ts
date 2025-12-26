@@ -8,8 +8,16 @@
 // API Configuration
 const OPENAI_API_URL = 'https://api.openai.com/v1';
 
-// OpenAI API Key
-const API_KEY = ""; // Safe!
+// OpenAI API Key - loaded from environment variable (.env file)
+// NEVER hardcode the API key here - always use EXPO_PUBLIC_OPENAI_API_KEY in .env
+const API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
+
+/**
+ * Check if the OpenAI API key is configured
+ */
+export function isApiKeyConfigured(): boolean {
+  return API_KEY !== '' && API_KEY.length > 0;
+}
 
 export interface ImageGenerationOptions {
   prompt: string;
