@@ -252,7 +252,7 @@ export default function RecordScreen() {
         uri: tempRecordingUri,
         voiceId: response.voice_id,
       };
-      addVoice(newVoice);
+      await addVoice(newVoice);
 
       // Reset and close modal
       setTempRecordingUri(null);

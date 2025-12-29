@@ -2,10 +2,14 @@
  * SavedVoicesContext
  * 
  * Provides shared state for saved voices across the app.
- * This allows the browse screen to access voices saved in the record screen.
+ * Syncs voices with Supabase for cross-device persistence.
  */
 
-import { createContext, ReactNode, useContext, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+
+import { supabase } from '@/lib/supabase';
+
+import { useAuth } from './AuthContext';
 
 // Saved voice item type
 export interface SavedVoice {
@@ -17,32 +21,159 @@ export interface SavedVoice {
   voiceId?: string; // ElevenLabs voice_id
 }
 
+// Database row type (matches Supabase table)
+interface SavedVoiceRow {
+  id: string;
+  user_id: string;
+  name: string;
+  duration: string;
+  voice_id: string | null;
+  created_at: string;
+}
+
 interface SavedVoicesContextType {
   savedVoices: SavedVoice[];
-  addVoice: (voice: SavedVoice) => void;
-  removeVoice: (id: string) => void;
+  isLoading: boolean;
+  addVoice: (voice: SavedVoice) => Promise<void>;
+  removeVoice: (id: string) => Promise<void>;
   clearVoices: () => void;
+  refreshVoices: () => Promise<void>;
 }
 
 const SavedVoicesContext = createContext<SavedVoicesContextType | undefined>(undefined);
 
 export function SavedVoicesProvider({ children }: { children: ReactNode }) {
   const [savedVoices, setSavedVoices] = useState<SavedVoice[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, isAuthenticated } = useAuth();
 
-  const addVoice = (voice: SavedVoice) => {
-    setSavedVoices((prev) => [voice, ...prev]);
+  // Convert database row to SavedVoice
+  const rowToVoice = (row: SavedVoiceRow): SavedVoice => ({
+    id: row.id,
+    name: row.name,
+    duration: row.duration,
+    date: new Date(row.created_at).toLocaleDateString(),
+    uri: '', // URI is local-only, not stored in DB
+    voiceId: row.voice_id || undefined,
+  });
+
+  // Fetch voices from Supabase
+  const fetchVoices = useCallback(async () => {
+    if (!user) {
+      setSavedVoices([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('saved_voices')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[SavedVoices] Error fetching voices:', error.message);
+        return;
+      }
+
+      if (data) {
+        setSavedVoices(data.map(rowToVoice));
+      }
+    } catch (error) {
+      console.error('[SavedVoices] Error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  // Load voices when user changes (login/logout)
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchVoices();
+    } else {
+      setSavedVoices([]);
+    }
+  }, [isAuthenticated, user, fetchVoices]);
+
+  // Add a voice (save to Supabase)
+  const addVoice = async (voice: SavedVoice) => {
+    if (!user) {
+      console.error('[SavedVoices] Cannot save voice: user not authenticated');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('saved_voices')
+        .insert({
+          id: voice.id,
+          user_id: user.id,
+          name: voice.name,
+          duration: voice.duration,
+          voice_id: voice.voiceId || null,
+        });
+
+      if (error) {
+        console.error('[SavedVoices] Error saving voice:', error.message);
+        throw error;
+      }
+
+      // Add to local state immediately for responsiveness
+      setSavedVoices((prev) => [voice, ...prev]);
+      console.log('[SavedVoices] Voice saved successfully:', voice.name);
+    } catch (error) {
+      console.error('[SavedVoices] Error:', error);
+      throw error;
+    }
   };
 
-  const removeVoice = (id: string) => {
-    setSavedVoices((prev) => prev.filter((voice) => voice.id !== id));
+  // Remove a voice (delete from Supabase)
+  const removeVoice = async (id: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('saved_voices')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('[SavedVoices] Error removing voice:', error.message);
+        throw error;
+      }
+
+      // Remove from local state
+      setSavedVoices((prev) => prev.filter((voice) => voice.id !== id));
+      console.log('[SavedVoices] Voice removed successfully');
+    } catch (error) {
+      console.error('[SavedVoices] Error:', error);
+      throw error;
+    }
   };
 
+  // Clear all voices (local state only - used on logout)
   const clearVoices = () => {
     setSavedVoices([]);
   };
 
+  // Manual refresh
+  const refreshVoices = async () => {
+    await fetchVoices();
+  };
+
   return (
-    <SavedVoicesContext.Provider value={{ savedVoices, addVoice, removeVoice, clearVoices }}>
+    <SavedVoicesContext.Provider 
+      value={{ 
+        savedVoices, 
+        isLoading, 
+        addVoice, 
+        removeVoice, 
+        clearVoices,
+        refreshVoices 
+      }}
+    >
       {children}
     </SavedVoicesContext.Provider>
   );
@@ -55,4 +186,3 @@ export function useSavedVoices() {
   }
   return context;
 }
-
