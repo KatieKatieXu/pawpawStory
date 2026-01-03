@@ -152,6 +152,12 @@ export default function StoryDetailScreen() {
     let isMounted = true;
 
     async function loadAudio() {
+      // Don't load if we already have a sound loaded (prevents race conditions)
+      if (soundRef.current) {
+        console.log('[Audio] Sound already loaded, skipping');
+        return;
+      }
+
       // Prioritize generated TTS audio when a voice is selected
       const audioSource = generatedAudioUri 
         ? generatedAudioUri 
@@ -175,7 +181,7 @@ export default function StoryDetailScreen() {
           onPlaybackStatusUpdate
         );
 
-        if (isMounted) {
+        if (isMounted && !soundRef.current) {
           soundRef.current = sound;
         } else {
           await sound.unloadAsync();
@@ -194,7 +200,9 @@ export default function StoryDetailScreen() {
         soundRef.current = null;
       }
     };
-  }, [story?.audioUrl, generatedAudioUri, onPlaybackStatusUpdate, speed]);
+    // Note: speed is handled separately in another useEffect to avoid reloading audio
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.audioUrl, generatedAudioUri, onPlaybackStatusUpdate]);
 
   // Save progress when component unmounts or when user navigates away
   useEffect(() => {
@@ -414,10 +422,34 @@ export default function StoryDetailScreen() {
               onPress={(e) => handleSeek(e, 280)} // Approximate width, adjust as needed
               className="active:opacity-90"
             >
-              <View className={`h-3 rounded-full overflow-hidden ${isNightMode ? 'bg-pawpaw-navyLight/80' : 'bg-[#e3d9cf]'}`}>
+              <View className="relative">
+                <View className={`h-3 rounded-full overflow-hidden ${isNightMode ? 'bg-pawpaw-navyLight/80' : 'bg-[#e3d9cf]'}`}>
+                  <Animated.View
+                    className={`h-full rounded-full ${isNightMode ? 'bg-pawpaw-yellow' : 'bg-[#ff8c42]'}`}
+                    style={animatedProgressStyle}
+                  />
+                </View>
+                {/* Progress Pin/Thumb */}
                 <Animated.View
-                  className={`h-full rounded-full ${isNightMode ? 'bg-pawpaw-yellow' : 'bg-[#ff8c42]'}`}
-                  style={animatedProgressStyle}
+                  className="absolute top-1/2"
+                  style={[
+                    {
+                      width: 18,
+                      height: 18,
+                      borderRadius: 9,
+                      backgroundColor: isNightMode ? '#ffd166' : '#ff8c42',
+                      marginTop: -9,
+                      marginLeft: -9,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.25,
+                      shadowRadius: 4,
+                      elevation: 4,
+                      borderWidth: 3,
+                      borderColor: isNightMode ? '#1e2749' : '#ffffff',
+                    },
+                    { left: `${progress01 * 100}%` },
+                  ]}
                 />
               </View>
               <View className="flex-row justify-between mt-3">
@@ -430,23 +462,10 @@ export default function StoryDetailScreen() {
               </View>
             </Pressable>
 
-            {/* Buttons row: Favorite / Play / Speed */}
+            {/* Buttons row: Play (center) / Favorite (right) */}
             <View className="flex-row items-center justify-between mt-6">
-              <Pressable
-                onPress={() => storyId && toggleFavorite(storyId)}
-                className={`w-14 h-14 rounded-2xl items-center justify-center ${
-                  isNightMode ? 'bg-pawpaw-navyLight/80' : 'bg-[#e3d9cf]'
-                }`}
-              >
-                <Ionicons
-                  name={isStoryFavorite ? 'heart' : 'heart-outline'}
-                  size={24}
-                  color={isStoryFavorite ? (isNightMode ? '#ffd166' : '#ff8c42') : (isNightMode ? '#c4cfdb' : '#8a7f75')}
-                />
-                <Text className={`${secondaryText} text-[10px] mt-1`} style={{ fontFamily: 'Nunito_400Regular' }}>
-                  Fav
-                </Text>
-              </Pressable>
+              {/* Empty spacer for left side */}
+              <View className="w-14 h-14" />
 
               <View className="items-center">
                 <Pressable
@@ -477,14 +496,18 @@ export default function StoryDetailScreen() {
               </View>
 
               <Pressable
-                onPress={handleToggleSpeed}
+                onPress={() => storyId && toggleFavorite(storyId)}
                 className={`w-14 h-14 rounded-2xl items-center justify-center ${
                   isNightMode ? 'bg-pawpaw-navyLight/80' : 'bg-[#e3d9cf]'
                 }`}
               >
-                <Ionicons name="speedometer-outline" size={22} color={isNightMode ? '#c4cfdb' : '#8a7f75'} />
+                <Ionicons
+                  name={isStoryFavorite ? 'heart' : 'heart-outline'}
+                  size={24}
+                  color={isStoryFavorite ? (isNightMode ? '#ffd166' : '#ff8c42') : (isNightMode ? '#c4cfdb' : '#8a7f75')}
+                />
                 <Text className={`${secondaryText} text-[10px] mt-1`} style={{ fontFamily: 'Nunito_400Regular' }}>
-                  {speed}x
+                  Fav
                 </Text>
               </Pressable>
             </View>

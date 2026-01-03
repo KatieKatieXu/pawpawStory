@@ -10,9 +10,9 @@ import { useTheme } from '@/contexts/ThemeContext';
 
 // Quick access items (first row only)
 const quickAccessItems = [
-  { icon: 'time-outline' as const, label: 'Continue', color: '#b88a7b' },
-  { icon: 'heart-outline' as const, label: 'Favorites', color: '#c9a892' },
   { icon: 'play-circle-outline' as const, label: 'Ready to Hear', color: '#a89179' },
+  { icon: 'heart-outline' as const, label: 'Favorites', color: '#c9a892' },
+  { icon: 'time-outline' as const, label: 'Continue', color: '#b88a7b' },
 ];
 
 // Get story categories from centralized data

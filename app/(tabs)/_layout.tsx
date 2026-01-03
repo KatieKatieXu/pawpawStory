@@ -95,6 +95,12 @@ export default function TabLayout() {
           href: null, // Hide from tab bar
         }}
       />
+      <Tabs.Screen
+        name="ready-to-hear"
+        options={{
+          href: null, // Hide from tab bar but keep tab bar visible
+        }}
+      />
     </Tabs>
   );
 }

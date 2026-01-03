@@ -4,6 +4,9 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
+import { usePlaybackProgress } from '@/contexts/PlaybackProgressContext';
+import { useSavedVoices } from '@/contexts/SavedVoicesContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 // Profile menu items
@@ -14,7 +17,15 @@ const menuItems = [
 export default function ProfileScreen() {
   const { isDayMode } = useTheme();
   const { user, isAuthenticated, signOut } = useAuth();
+  const { favorites } = useFavorites();
+  const { savedVoices } = useSavedVoices();
+  const { progress } = usePlaybackProgress();
   const isNightMode = !isDayMode;
+
+  // Stats counts
+  const storiesReadCount = progress.length;
+  const recordingsCount = savedVoices.length;
+  const favoritesCount = favorites.length;
 
   // Format the join date
   const formatJoinDate = (dateString: string) => {
@@ -169,7 +180,7 @@ export default function ProfileScreen() {
                   className={`${accentColor} text-3xl`}
                   style={{ fontFamily: 'Nunito_800ExtraBold' }}
                 >
-                  0
+                  {storiesReadCount}
                 </Text>
                 <Text
                   className={`${secondaryText} text-sm mt-1`}
@@ -185,7 +196,7 @@ export default function ProfileScreen() {
                   className={`${accentColor} text-3xl`}
                   style={{ fontFamily: 'Nunito_800ExtraBold' }}
                 >
-                  0
+                  {recordingsCount}
                 </Text>
                 <Text
                   className={`${secondaryText} text-sm mt-1`}
@@ -201,7 +212,7 @@ export default function ProfileScreen() {
                   className={`${accentColor} text-3xl`}
                   style={{ fontFamily: 'Nunito_800ExtraBold' }}
                 >
-                  0
+                  {favoritesCount}
                 </Text>
                 <Text
                   className={`${secondaryText} text-sm mt-1`}
