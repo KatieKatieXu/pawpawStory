@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const redirectUrl = getAuthRedirectUrl();
       console.log('[Auth] Signup redirect URL:', redirectUrl);
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -73,11 +73,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        console.error('[Auth] Signup error:', error);
         return { error: new Error(error.message) };
+      }
+
+      // Log signup result for debugging
+      console.log('[Auth] Signup successful:', {
+        userId: data.user?.id,
+        email: data.user?.email,
+        emailConfirmedAt: data.user?.email_confirmed_at,
+        confirmationSentAt: data.user?.confirmation_sent_at,
+      });
+
+      // Check if email confirmation is required
+      if (data.user && !data.user.email_confirmed_at) {
+        console.log('[Auth] Email confirmation required - confirmation email should be sent');
+      } else if (data.user?.email_confirmed_at) {
+        console.log('[Auth] Email already confirmed (confirmation disabled in Supabase)');
       }
 
       return { error: null };
     } catch (error) {
+      console.error('[Auth] Signup exception:', error);
       return { error: error instanceof Error ? error : new Error('Sign up failed') };
     }
   };

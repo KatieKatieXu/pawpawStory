@@ -170,8 +170,11 @@ export default function ForgotPasswordScreen() {
                 </Text>
                 <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder}`}>
                   <TextInput
-                    className={`px-4 py-3 ${inputText} text-base`}
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="px-4 py-3 text-base"
+                    style={{ 
+                      fontFamily: 'Nunito_400Regular',
+                      color: isNightMode ? '#f8f9fa' : '#3d3630',
+                    }}
                     placeholder="Enter your email"
                     placeholderTextColor={placeholderColor}
                     value={email}
@@ -179,6 +182,8 @@ export default function ForgotPasswordScreen() {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     editable={!isLoading}
                   />
                 </View>

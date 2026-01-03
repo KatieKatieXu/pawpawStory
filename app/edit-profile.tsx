@@ -1,7 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
+    ActionSheetIOS,
     ActivityIndicator,
     Alert,
     KeyboardAvoidingView,
@@ -27,13 +30,16 @@ export default function EditProfileScreen() {
                       user?.user_metadata?.full_name || 
                       '';
   const currentEmail = user?.email || '';
+  const currentAvatarUrl = user?.user_metadata?.avatar_url || null;
   
   // Check if user signed in with email (not Apple/OAuth)
   const isEmailUser = user?.app_metadata?.provider === 'email';
 
   const [name, setName] = useState(currentName);
+  const [profileImage, setProfileImage] = useState<string | null>(currentAvatarUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+  const [isPhotoLoading, setIsPhotoLoading] = useState(false);
   
   // Password fields
   const [newPassword, setNewPassword] = useState('');
@@ -121,6 +127,138 @@ export default function EditProfileScreen() {
     }
   };
 
+  // Request camera permission
+  const requestCameraPermission = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Camera Access Required',
+        'Please enable camera access in your device settings to take a profile photo.',
+        [{ text: 'OK' }]
+      );
+      return false;
+    }
+    return true;
+  };
+
+  // Request photo library permission
+  const requestPhotoLibraryPermission = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Photo Access Required',
+        'Please enable photo library access in your device settings to choose a profile picture.',
+        [{ text: 'OK' }]
+      );
+      return false;
+    }
+    return true;
+  };
+
+  // Pick image from library
+  const pickImageFromLibrary = async () => {
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
+    setIsPhotoLoading(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        await updateProfilePhoto(imageUri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick image from library');
+    } finally {
+      setIsPhotoLoading(false);
+    }
+  };
+
+  // Take photo with camera
+  const takePhotoWithCamera = async () => {
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) return;
+
+    setIsPhotoLoading(true);
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        await updateProfilePhoto(imageUri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to take photo');
+    } finally {
+      setIsPhotoLoading(false);
+    }
+  };
+
+  // Update profile photo in Supabase
+  const updateProfilePhoto = async (imageUri: string) => {
+    try {
+      // Update local state first for immediate feedback
+      setProfileImage(imageUri);
+
+      // Update user metadata with the new avatar URL
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          avatar_url: imageUri,
+        },
+      });
+
+      if (error) {
+        Alert.alert('Error', 'Failed to save profile photo');
+        setProfileImage(currentAvatarUrl); // Revert on error
+      } else {
+        Alert.alert('Success', 'Profile photo updated!');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update profile photo');
+      setProfileImage(currentAvatarUrl); // Revert on error
+    }
+  };
+
+  // Show photo picker options
+  const handleChangePhoto = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Take Photo', 'Choose from Library'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            takePhotoWithCamera();
+          } else if (buttonIndex === 2) {
+            pickImageFromLibrary();
+          }
+        }
+      );
+    } else {
+      // Android fallback using Alert
+      Alert.alert(
+        'Change Profile Photo',
+        'How would you like to add a photo?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Take Photo', onPress: takePhotoWithCamera },
+          { text: 'Choose from Library', onPress: pickImageFromLibrary },
+        ]
+      );
+    }
+  };
+
   return (
     <View className={`flex-1 ${bg}`}>
       <KeyboardAvoidingView
@@ -152,15 +290,29 @@ export default function EditProfileScreen() {
           {/* Avatar Section */}
           <View className="items-center mb-8">
             <View
-              className="w-28 h-28 rounded-full items-center justify-center"
+              className="w-28 h-28 rounded-full items-center justify-center overflow-hidden"
               style={{ backgroundColor: isNightMode ? '#2b3a67' : '#e3d9cf' }}
             >
-              <Ionicons name="person" size={56} color={iconColor} />
+              {isPhotoLoading ? (
+                <ActivityIndicator size="large" color={iconColor} />
+              ) : profileImage ? (
+                <Image
+                  source={{ uri: profileImage }}
+                  style={{ width: 112, height: 112 }}
+                  contentFit="cover"
+                />
+              ) : (
+                <Ionicons name="person" size={56} color={iconColor} />
+              )}
             </View>
-            <Pressable className="mt-3">
+            <Pressable 
+              className="mt-3"
+              onPress={handleChangePhoto}
+              disabled={isPhotoLoading}
+            >
               <Text
                 className={`text-sm ${isNightMode ? 'text-pawpaw-yellow' : 'text-[#ff8c42]'}`}
-                style={{ fontFamily: 'Nunito_700Bold' }}
+                style={{ fontFamily: 'Nunito_700Bold', opacity: isPhotoLoading ? 0.5 : 1 }}
               >
                 Change Photo
               </Text>
@@ -179,13 +331,18 @@ export default function EditProfileScreen() {
               </Text>
               <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder}`}>
                 <TextInput
-                  className={`px-4 py-3 ${inputText} text-base`}
-                  style={{ fontFamily: 'Nunito_400Regular' }}
+                  className="px-4 py-3 text-base"
+                  style={{ 
+                    fontFamily: 'Nunito_400Regular',
+                    color: isNightMode ? '#f8f9fa' : '#3d3630',
+                  }}
                   placeholder="Enter your name"
                   placeholderTextColor={placeholderColor}
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
+                  autoComplete="name"
+                  textContentType="name"
                   editable={!isLoading}
                 />
               </View>
@@ -201,8 +358,11 @@ export default function EditProfileScreen() {
               </Text>
               <View className={`${cardBg} rounded-2xl border-[1.5px] ${inputBorder} opacity-60`}>
                 <TextInput
-                  className={`px-4 py-3 ${inputText} text-base`}
-                  style={{ fontFamily: 'Nunito_400Regular' }}
+                  className="px-4 py-3 text-base"
+                  style={{ 
+                    fontFamily: 'Nunito_400Regular',
+                    color: isNightMode ? '#f8f9fa' : '#3d3630',
+                  }}
                   value={currentEmail}
                   editable={false}
                 />
@@ -266,18 +426,24 @@ export default function EditProfileScreen() {
                   </Text>
                   <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder} flex-row items-center`}>
                     <TextInput
-                      className={`flex-1 px-4 py-3 ${inputText} text-base`}
-                      style={{ fontFamily: 'Nunito_400Regular' }}
+                      className="flex-1 px-4 py-3 text-base"
+                      style={{ 
+                        fontFamily: 'Nunito_400Regular',
+                        color: isNightMode ? '#f8f9fa' : '#3d3630',
+                      }}
                       placeholder="Enter new password"
                       placeholderTextColor={placeholderColor}
                       value={newPassword}
                       onChangeText={setNewPassword}
                       secureTextEntry={!showNewPassword}
+                      autoComplete="password-new"
+                      textContentType="newPassword"
                       editable={!isPasswordLoading}
                     />
                     <Pressable 
                       onPress={() => setShowNewPassword(!showNewPassword)}
                       className="px-4"
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                       <Ionicons 
                         name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} 
@@ -298,18 +464,24 @@ export default function EditProfileScreen() {
                   </Text>
                   <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder} flex-row items-center`}>
                     <TextInput
-                      className={`flex-1 px-4 py-3 ${inputText} text-base`}
-                      style={{ fontFamily: 'Nunito_400Regular' }}
+                      className="flex-1 px-4 py-3 text-base"
+                      style={{ 
+                        fontFamily: 'Nunito_400Regular',
+                        color: isNightMode ? '#f8f9fa' : '#3d3630',
+                      }}
                       placeholder="Confirm new password"
                       placeholderTextColor={placeholderColor}
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
                       secureTextEntry={!showConfirmPassword}
+                      autoComplete="password-new"
+                      textContentType="newPassword"
                       editable={!isPasswordLoading}
                     />
                     <Pressable 
                       onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="px-4"
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                       <Ionicons 
                         name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 

@@ -49,6 +49,8 @@ export default function LoginScreen() {
   const buttonBorder = isNightMode ? 'border-pawpaw-yellowDark' : 'border-[#e67700]';
   const buttonText = isNightMode ? 'text-pawpaw-navy' : 'text-white';
   const iconColor = isNightMode ? '#7b8fb8' : '#8a7f75';
+  const cardBg = isNightMode ? 'bg-pawpaw-navyLight' : 'bg-[#fdfbf8]';
+  const borderColor = isNightMode ? 'border-pawpaw-border' : 'border-[#e3d9cf]';
 
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -100,10 +102,20 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Back Button */}
+          <View className="px-6 pt-2">
+            <Pressable
+              onPress={() => router.back()}
+              className={`w-11 h-11 rounded-full items-center justify-center ${cardBg} border-b-[3px] ${borderColor}`}
+            >
+              <Ionicons name="arrow-back" size={20} color={isNightMode ? '#f8f9fa' : '#3d3630'} />
+            </Pressable>
+          </View>
+
           {/* Content */}
           <View className="flex-1 px-6">
             {/* Title Section */}
-            <View className="mt-8 mb-6">
+            <View className="mt-4 mb-6">
               <Text
                 className={`${primaryText} text-[32px] leading-[48px]`}
                 style={{ fontFamily: 'Nunito_800ExtraBold' }}
@@ -130,8 +142,11 @@ export default function LoginScreen() {
                 </Text>
                 <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder}`}>
                   <TextInput
-                    className={`px-4 py-3 ${inputText} text-base`}
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="px-4 py-3 text-base"
+                    style={{ 
+                      fontFamily: 'Nunito_400Regular',
+                      color: isNightMode ? '#f8f9fa' : '#3d3630',
+                    }}
                     placeholder="Enter your email"
                     placeholderTextColor={placeholderColor}
                     value={email}
@@ -139,6 +154,8 @@ export default function LoginScreen() {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     editable={!isLoading}
                   />
                 </View>
@@ -154,18 +171,24 @@ export default function LoginScreen() {
                 </Text>
                 <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder} flex-row items-center`}>
                   <TextInput
-                    className={`flex-1 px-4 py-3 ${inputText} text-base`}
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="flex-1 px-4 py-3 text-base"
+                    style={{ 
+                      fontFamily: 'Nunito_400Regular',
+                      color: isNightMode ? '#f8f9fa' : '#3d3630',
+                    }}
                     placeholder="Enter your password"
                     placeholderTextColor={placeholderColor}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
+                    autoComplete="password"
+                    textContentType="password"
                     editable={!isLoading}
                   />
                   <Pressable 
                     onPress={() => setShowPassword(!showPassword)}
                     className="px-4"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Ionicons 
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'} 

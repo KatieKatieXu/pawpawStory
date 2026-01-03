@@ -70,7 +70,7 @@ export default function WelcomeScreen() {
             </Text>
           </Pressable>
 
-          {/* Already Have Account Button */}
+          {/* Login / Sign up Button */}
           <Pressable
             onPress={() => router.push('/login')}
             className="rounded-2xl py-[18px] active:opacity-70"
@@ -79,7 +79,7 @@ export default function WelcomeScreen() {
               className={`${accentColor} text-base text-center`}
               style={{ fontFamily: 'Nunito_400Regular' }}
             >
-              I ALREADY HAVE AN ACCOUNT
+              Log in / Sign up
             </Text>
           </Pressable>
         </View>

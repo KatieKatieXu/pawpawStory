@@ -84,11 +84,11 @@ export default function SignupScreen() {
       Alert.alert('Sign Up Failed', error.message);
     } else {
       Alert.alert(
-        'Check Your Email',
-        'We sent you a confirmation email. Please verify your email to complete sign up.',
+        'Account Created! 🎉',
+        'Your account has been set up successfully. You can now sign in.',
         [
           {
-            text: 'OK',
+            text: 'Sign In',
             onPress: () => router.replace('/login'),
           },
         ]
@@ -161,13 +161,18 @@ export default function SignupScreen() {
                 </Text>
                 <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder}`}>
                   <TextInput
-                    className={`px-4 py-3 ${inputText} text-base`}
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="px-4 py-3 text-base"
+                    style={{ 
+                      fontFamily: 'Nunito_400Regular',
+                      color: isNightMode ? '#f8f9fa' : '#3d3630',
+                    }}
                     placeholder="Enter your name"
                     placeholderTextColor={placeholderColor}
                     value={name}
                     onChangeText={setName}
                     autoCapitalize="words"
+                    autoComplete="name"
+                    textContentType="name"
                     editable={!isLoading}
                   />
                 </View>
@@ -183,8 +188,11 @@ export default function SignupScreen() {
                 </Text>
                 <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder}`}>
                   <TextInput
-                    className={`px-4 py-3 ${inputText} text-base`}
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="px-4 py-3 text-base"
+                    style={{ 
+                      fontFamily: 'Nunito_400Regular',
+                      color: isNightMode ? '#f8f9fa' : '#3d3630',
+                    }}
                     placeholder="Enter your email"
                     placeholderTextColor={placeholderColor}
                     value={email}
@@ -192,6 +200,8 @@ export default function SignupScreen() {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     editable={!isLoading}
                   />
                 </View>
@@ -207,18 +217,24 @@ export default function SignupScreen() {
                 </Text>
                 <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder} flex-row items-center`}>
                   <TextInput
-                    className={`flex-1 px-4 py-3 ${inputText} text-base`}
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="flex-1 px-4 py-3 text-base"
+                    style={{ 
+                      fontFamily: 'Nunito_400Regular',
+                      color: isNightMode ? '#f8f9fa' : '#3d3630',
+                    }}
                     placeholder="Create a password"
                     placeholderTextColor={placeholderColor}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
+                    autoComplete="password-new"
+                    textContentType="newPassword"
                     editable={!isLoading}
                   />
                   <Pressable 
                     onPress={() => setShowPassword(!showPassword)}
                     className="px-4"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Ionicons 
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
@@ -245,13 +261,18 @@ export default function SignupScreen() {
                 </Text>
                 <View className={`${inputBg} rounded-2xl border-[1.5px] ${inputBorder}`}>
                   <TextInput
-                    className={`px-4 py-3 ${inputText} text-base`}
-                    style={{ fontFamily: 'Nunito_400Regular' }}
+                    className="px-4 py-3 text-base"
+                    style={{ 
+                      fontFamily: 'Nunito_400Regular',
+                      color: isNightMode ? '#f8f9fa' : '#3d3630',
+                    }}
                     placeholder="Confirm your password"
                     placeholderTextColor={placeholderColor}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry={!showPassword}
+                    autoComplete="password-new"
+                    textContentType="newPassword"
                     editable={!isLoading}
                   />
                 </View>

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -41,6 +42,13 @@ export default function ProfileScreen() {
     return 'User';
   };
 
+  // Get user avatar URL
+  const getUserAvatar = () => {
+    return user?.user_metadata?.avatar_url || null;
+  };
+
+  const avatarUrl = getUserAvatar();
+
   const handleSignOut = async () => {
     await signOut();
     router.replace('/');
@@ -77,10 +85,18 @@ export default function ProfileScreen() {
             >
               {/* Avatar */}
               <View
-                className="w-24 h-24 rounded-full items-center justify-center mb-4"
+                className="w-24 h-24 rounded-full items-center justify-center mb-4 overflow-hidden"
                 style={{ backgroundColor: iconBg }}
               >
-                <Ionicons name="person" size={48} color={iconColor} />
+                {avatarUrl ? (
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    style={{ width: 96, height: 96 }}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <Ionicons name="person" size={48} color={iconColor} />
+                )}
               </View>
 
               {isAuthenticated && user ? (
