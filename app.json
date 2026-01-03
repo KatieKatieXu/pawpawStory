@@ -11,11 +11,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.yuexu.pawpawStory.2025",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "pawpawStory needs access to your camera to take a profile photo.",
-        "NSPhotoLibraryUsageDescription": "pawpawStory needs access to your photos to choose a profile picture."
+        "NSMicrophoneUsageDescription": "pawpawStory uses your microphone to record your voice for creating personalized story narrations. For example, you can record yourself reading a short passage, and the app will use your voice to narrate bedtime stories for your children.",
+        "NSCameraUsageDescription": "pawpawStory uses your camera to take a profile photo. This photo will be displayed on your profile page to personalize your account.",
+        "NSPhotoLibraryUsageDescription": "pawpawStory accesses your photo library so you can select an existing photo for your profile picture. The selected photo will be displayed on your profile page.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -27,7 +29,10 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.yuexu.pawpawStory"
+      "package": "com.yuexu.pawpawStory",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -50,14 +55,26 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "pawpawStory needs access to your photos to choose a profile picture.",
-          "cameraPermission": "pawpawStory needs access to your camera to take a profile photo."
+          "photosPermission": "pawpawStory accesses your photo library so you can select an existing photo for your profile picture. The selected photo will be displayed on your profile page.",
+          "cameraPermission": "pawpawStory uses your camera to take a profile photo. This photo will be displayed on your profile page to personalize your account."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "pawpawStory uses your microphone to record your voice for creating personalized story narrations. For example, you can record yourself reading a short passage, and the app will use your voice to narrate bedtime stories for your children."
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "52026fad-e0b6-45dc-9e4e-0ed01bc557f7"
+      }
     }
   }
 }
