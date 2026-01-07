@@ -5,7 +5,8 @@
  * It uses the ElevenLabs TTS API to convert story text to speech.
  */
 
-import * as FileSystem from 'expo-file-system';
+// Import from legacy which maintains backward compatibility
+import * as FileSystem from 'expo-file-system/legacy';
 
 // API Configuration
 const ELEVENLABS_TTS_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
@@ -79,7 +80,6 @@ export async function generateSpeech(options: TTSOptions): Promise<TTSResponse> 
     });
 
     console.log('[TTS] Response status:', response.status);
-    console.log('[TTS] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -102,13 +102,12 @@ export async function generateSpeech(options: TTSOptions): Promise<TTSResponse> 
     // Get the audio data as a blob
     const audioBlob = await response.blob();
     console.log('[TTS] Audio blob size:', audioBlob.size, 'bytes');
-    console.log('[TTS] Audio blob type:', audioBlob.type);
 
     if (audioBlob.size === 0) {
       throw new Error('Received empty audio response from API');
     }
 
-    // Convert blob to base64 and save to file
+    // Convert blob to base64
     const reader = new FileReader();
     const base64Audio = await new Promise<string>((resolve, reject) => {
       reader.onloadend = () => {
@@ -181,10 +180,15 @@ export async function generateStoryAudio(
   const cacheFilename = `story_${storyId}_${voiceId}.mp3`;
   const cacheUri = `${FileSystem.cacheDirectory}${cacheFilename}`;
   
-  const fileInfo = await FileSystem.getInfoAsync(cacheUri);
-  if (fileInfo.exists) {
-    console.log('[TTS] Using cached audio:', cacheUri);
-    return cacheUri;
+  try {
+    const fileInfo = await FileSystem.getInfoAsync(cacheUri);
+    if (fileInfo.exists) {
+      console.log('[TTS] Using cached audio:', cacheUri);
+      return cacheUri;
+    }
+  } catch (error) {
+    // File doesn't exist, continue to generate
+    console.log('[TTS] Cache check error (likely file not found):', error);
   }
   
   console.log('[TTS] No cache found, generating new audio...');
@@ -195,15 +199,19 @@ export async function generateStoryAudio(
     text: storyText,
   });
   
-  // Rename to cache filename for future use
-  await FileSystem.moveAsync({
-    from: result.audioUri,
-    to: cacheUri,
-  });
-  
-  console.log('[TTS] Audio cached at:', cacheUri);
-  
-  return cacheUri;
+  // Move to cache filename for future use
+  try {
+    await FileSystem.moveAsync({
+      from: result.audioUri,
+      to: cacheUri,
+    });
+    console.log('[TTS] Audio cached at:', cacheUri);
+    return cacheUri;
+  } catch (error) {
+    // If move fails, just return the original URI
+    console.log('[TTS] Move failed, using original URI:', error);
+    return result.audioUri;
+  }
 }
 
 /**
@@ -215,15 +223,19 @@ export async function clearAudioCache(storyId?: string): Promise<void> {
   const cacheDir = FileSystem.cacheDirectory;
   if (!cacheDir) return;
 
-  const files = await FileSystem.readDirectoryAsync(cacheDir);
-  
-  for (const file of files) {
-    if (file.startsWith('story_') || file.startsWith('tts_')) {
-      if (!storyId || file.includes(storyId)) {
-        await FileSystem.deleteAsync(`${cacheDir}${file}`, { idempotent: true });
-        console.log('[TTS] Deleted cached file:', file);
+  try {
+    const files = await FileSystem.readDirectoryAsync(cacheDir);
+    
+    for (const file of files) {
+      if (file.startsWith('story_') || file.startsWith('tts_')) {
+        if (!storyId || file.includes(storyId)) {
+          await FileSystem.deleteAsync(`${cacheDir}${file}`, { idempotent: true });
+          console.log('[TTS] Deleted cached file:', file);
+        }
       }
     }
+  } catch (error) {
+    console.error('[TTS] Error clearing cache:', error);
   }
 }
 
@@ -234,6 +246,10 @@ export async function isAudioCached(storyId: string, voiceId: string): Promise<b
   const cacheFilename = `story_${storyId}_${voiceId}.mp3`;
   const cacheUri = `${FileSystem.cacheDirectory}${cacheFilename}`;
   
-  const fileInfo = await FileSystem.getInfoAsync(cacheUri);
-  return fileInfo.exists;
+  try {
+    const fileInfo = await FileSystem.getInfoAsync(cacheUri);
+    return fileInfo.exists;
+  } catch {
+    return false;
+  }
 }
