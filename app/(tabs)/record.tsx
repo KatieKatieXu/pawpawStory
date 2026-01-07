@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import * as Linking from 'expo-linking';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -26,7 +27,7 @@ export default function RecordScreen() {
   const isNightMode = !isDayMode;
   
   // Use shared saved voices context
-  const { savedVoices, addVoice } = useSavedVoices();
+  const { savedVoices, addVoice, removeVoice } = useSavedVoices();
 
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -66,31 +67,68 @@ export default function RecordScreen() {
   const recordBtnShadow = isNightMode ? '#ffd166' : '#ff8c42';
   const iconColor = isNightMode ? '#1e2749' : '#ffffff';
 
+  // Open device settings
+  const openSettings = () => {
+    if (Platform.OS === 'ios') {
+      Linking.openURL('app-settings:');
+    } else {
+      Linking.openSettings();
+    }
+  };
+
+  // Request microphone permission with actionable dialog
+  const requestMicrophonePermission = async (): Promise<boolean> => {
+    try {
+      // First check current permission status
+      const { status: existingStatus } = await Audio.getPermissionsAsync();
+      
+      if (existingStatus === 'granted') {
+        return true;
+      }
+      
+      // Request permission
+      const { status } = await Audio.requestPermissionsAsync();
+      
+      if (status === 'granted') {
+        return true;
+      }
+      
+      // Permission denied - show actionable dialog
+      Alert.alert(
+        'Microphone Access Required',
+        'pawpawStory needs microphone access to record your voice for creating personalized story narrations. Please enable it in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: openSettings },
+        ]
+      );
+      return false;
+    } catch (error) {
+      console.error('Error requesting microphone permission:', error);
+      return false;
+    }
+  };
+
   // Request microphone permission on mount
   useEffect(() => {
-    async function requestPermission() {
+    async function initializePermission() {
       try {
-        const { status } = await Audio.requestPermissionsAsync();
-        setHasPermission(status === 'granted');
-        if (status !== 'granted') {
-          Alert.alert(
-            'Microphone Permission Required',
-            'Please enable microphone access in your device settings to record your voice.',
-            [{ text: 'OK' }]
-          );
-        }
+        const granted = await requestMicrophonePermission();
+        setHasPermission(granted);
         
-        // Configure audio mode for recording
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
+        if (granted) {
+          // Configure audio mode for recording
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: true,
+            playsInSilentModeIOS: true,
+          });
+        }
       } catch (error) {
-        console.error('Error requesting permission:', error);
+        console.error('Error initializing permission:', error);
         setHasPermission(false);
       }
     }
-    requestPermission();
+    initializePermission();
 
     return () => {
       // Cleanup on unmount
@@ -141,8 +179,10 @@ export default function RecordScreen() {
 
   const handleStartRecording = async () => {
     if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Microphone access is required to record.');
-      return;
+      // Try to request permission again with actionable dialog
+      const granted = await requestMicrophonePermission();
+      setHasPermission(granted);
+      if (!granted) return;
     }
 
     try {
@@ -351,6 +391,37 @@ export default function RecordScreen() {
       setPlayingVoiceId(null);
       Alert.alert('Playback Error', 'Could not play the recording.');
     }
+  };
+
+  // Delete a saved voice with confirmation
+  const handleDeleteVoice = (voice: SavedVoice) => {
+    Alert.alert(
+      'Delete Voice',
+      `Are you sure you want to delete "${voice.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Stop playback if this voice is playing
+              if (playingVoiceId === voice.id && soundRef.current) {
+                await soundRef.current.stopAsync();
+                await soundRef.current.unloadAsync();
+                soundRef.current = null;
+                setPlayingVoiceId(null);
+              }
+              
+              await removeVoice(voice.id);
+            } catch (error) {
+              console.error('Error deleting voice:', error);
+              Alert.alert('Error', 'Could not delete the voice. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -567,11 +638,17 @@ export default function RecordScreen() {
                           {voice.duration} • {voice.date}
                         </Text>
                       </View>
-                      <Ionicons
-                        name="trash-outline"
-                        size={20}
-                        color={isNightMode ? '#c4cfdb' : '#8a7f75'}
-                      />
+                      <Pressable
+                        onPress={() => handleDeleteVoice(voice)}
+                        hitSlop={10}
+                        className="p-2"
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={20}
+                          color={isNightMode ? '#c4cfdb' : '#8a7f75'}
+                        />
+                      </Pressable>
                     </View>
                   );
                 })}

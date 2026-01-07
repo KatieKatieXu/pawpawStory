@@ -5,16 +5,7 @@
  * It uses the ElevenLabs TTS API to convert story text to speech.
  */
 
-// Use legacy API for expo-file-system compatibility
-import {
-  cacheDirectory,
-  deleteAsync,
-  EncodingType,
-  getInfoAsync,
-  moveAsync,
-  readDirectoryAsync,
-  writeAsStringAsync,
-} from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 
 // API Configuration
 const ELEVENLABS_TTS_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
@@ -136,13 +127,13 @@ export async function generateSpeech(options: TTSOptions): Promise<TTSResponse> 
 
     // Generate a unique filename
     const filename = `tts_${voiceId}_${Date.now()}.mp3`;
-    const fileUri = `${cacheDirectory}${filename}`;
+    const fileUri = `${FileSystem.cacheDirectory}${filename}`;
 
     console.log('[TTS] Saving to:', fileUri);
 
     // Write the audio file
-    await writeAsStringAsync(fileUri, base64Audio, {
-      encoding: EncodingType.Base64,
+    await FileSystem.writeAsStringAsync(fileUri, base64Audio, {
+      encoding: FileSystem.EncodingType.Base64,
     });
 
     console.log('[TTS] Audio saved successfully!');
@@ -188,9 +179,9 @@ export async function generateStoryAudio(
   
   // Check if we already have a cached version
   const cacheFilename = `story_${storyId}_${voiceId}.mp3`;
-  const cacheUri = `${cacheDirectory}${cacheFilename}`;
+  const cacheUri = `${FileSystem.cacheDirectory}${cacheFilename}`;
   
-  const fileInfo = await getInfoAsync(cacheUri);
+  const fileInfo = await FileSystem.getInfoAsync(cacheUri);
   if (fileInfo.exists) {
     console.log('[TTS] Using cached audio:', cacheUri);
     return cacheUri;
@@ -205,7 +196,7 @@ export async function generateStoryAudio(
   });
   
   // Rename to cache filename for future use
-  await moveAsync({
+  await FileSystem.moveAsync({
     from: result.audioUri,
     to: cacheUri,
   });
@@ -221,15 +212,15 @@ export async function generateStoryAudio(
  * @param storyId - Optional story ID to clear, or undefined to clear all
  */
 export async function clearAudioCache(storyId?: string): Promise<void> {
-  const cacheDir = cacheDirectory;
+  const cacheDir = FileSystem.cacheDirectory;
   if (!cacheDir) return;
 
-  const files = await readDirectoryAsync(cacheDir);
+  const files = await FileSystem.readDirectoryAsync(cacheDir);
   
   for (const file of files) {
     if (file.startsWith('story_') || file.startsWith('tts_')) {
       if (!storyId || file.includes(storyId)) {
-        await deleteAsync(`${cacheDir}${file}`, { idempotent: true });
+        await FileSystem.deleteAsync(`${cacheDir}${file}`, { idempotent: true });
         console.log('[TTS] Deleted cached file:', file);
       }
     }
@@ -241,8 +232,8 @@ export async function clearAudioCache(storyId?: string): Promise<void> {
  */
 export async function isAudioCached(storyId: string, voiceId: string): Promise<boolean> {
   const cacheFilename = `story_${storyId}_${voiceId}.mp3`;
-  const cacheUri = `${cacheDirectory}${cacheFilename}`;
+  const cacheUri = `${FileSystem.cacheDirectory}${cacheFilename}`;
   
-  const fileInfo = await getInfoAsync(cacheUri);
+  const fileInfo = await FileSystem.getInfoAsync(cacheUri);
   return fileInfo.exists;
 }
