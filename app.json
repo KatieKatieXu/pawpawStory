@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.yuexu.pawpawStory.2025",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "pawpawStory uses your microphone to record your voice for creating personalized story narrations. For example, you can record yourself reading a short passage, and the app will use your voice to narrate bedtime stories for your children.",

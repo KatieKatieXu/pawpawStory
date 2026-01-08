@@ -23,6 +23,7 @@ interface AuthContextType {
   signInWithApple: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  deleteAccount: () => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -208,6 +209,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Delete account
+  const deleteAccount = async () => {
+    try {
+      if (!user || !session) {
+        return { error: new Error('No user logged in') };
+      }
+
+      console.log('[Auth] Attempting to delete account for user:', user.id);
+
+      // Get the Supabase URL from environment
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+
+      // Try Edge Function first (most reliable)
+      if (supabaseUrl) {
+        try {
+          const response = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            console.log('[Auth] Account deleted successfully via Edge Function');
+            await supabase.auth.signOut();
+            return { error: null };
+          }
+          
+          // If Edge Function returns error, try SQL function
+          console.log('[Auth] Edge Function not available, trying SQL function...');
+        } catch (fetchError) {
+          console.log('[Auth] Edge Function fetch failed, trying SQL function...');
+        }
+      }
+
+      // Fallback: Try SQL function (delete_own_user)
+      const { error: rpcError } = await supabase.rpc('delete_own_user');
+      
+      if (rpcError) {
+        console.error('[Auth] SQL function error:', rpcError.message);
+        return { error: new Error('Failed to delete account. Please contact support.') };
+      }
+
+      console.log('[Auth] Account deleted successfully via SQL function');
+      await supabase.auth.signOut();
+      return { error: null };
+      
+    } catch (error) {
+      console.error('[Auth] Delete account error:', error);
+      return { error: error instanceof Error ? error : new Error('Account deletion failed') };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -218,6 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithApple,
     signOut,
     resetPassword,
+    deleteAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

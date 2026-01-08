@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -16,11 +17,12 @@ const menuItems = [
 
 export default function ProfileScreen() {
   const { isDayMode } = useTheme();
-  const { user, isAuthenticated, signOut } = useAuth();
+  const { user, isAuthenticated, signOut, deleteAccount } = useAuth();
   const { favorites } = useFavorites();
   const { savedVoices } = useSavedVoices();
   const { progress } = usePlaybackProgress();
   const isNightMode = !isDayMode;
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Stats counts
   const storiesReadCount = progress.length;
@@ -63,6 +65,51 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     await signOut();
     router.replace('/');
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone. All your data including recordings, favorites, and progress will be permanently removed.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => confirmDeleteAccount(),
+        },
+      ]
+    );
+  };
+
+  const confirmDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await deleteAccount();
+      if (error) {
+        Alert.alert('Error', 'Failed to delete account. Please try again or contact support.');
+        console.error('[Profile] Delete account error:', error);
+      } else {
+        Alert.alert(
+          'Account Deleted',
+          'Your account has been successfully deleted.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/'),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      console.error('[Profile] Delete account exception:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Theme colors
@@ -285,6 +332,29 @@ export default function ProfileScreen() {
                   style={{ fontFamily: 'Nunito_700Bold' }}
                 >
                   Sign Out
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
+          {/* Delete Account Button - Only show when authenticated */}
+          {isAuthenticated && (
+            <View className="px-6 mt-4 mb-8">
+              <Pressable
+                onPress={handleDeleteAccount}
+                disabled={isDeleting}
+                className={`flex-row items-center justify-center py-4 rounded-2xl border-2 border-red-400 ${isDeleting ? 'opacity-50' : ''}`}
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={20}
+                  color="#ef4444"
+                />
+                <Text
+                  className="text-red-400 text-base ml-2"
+                  style={{ fontFamily: 'Nunito_700Bold' }}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete Account'}
                 </Text>
               </Pressable>
             </View>
