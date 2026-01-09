@@ -33,6 +33,7 @@ export default function ResetPasswordScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
+  const [hasVerified, setHasVerified] = useState(false);
 
   // Theme colors
   const bg = isNightMode ? 'bg-pawpaw-navy' : 'bg-[#f5ede6]';
@@ -46,18 +47,27 @@ export default function ResetPasswordScreen() {
   const buttonText = isNightMode ? 'text-pawpaw-navy' : 'text-white';
   const accentColor = isNightMode ? '#ffd166' : '#ff8c42';
 
-  // Verify the session from URL tokens
+  // Verify the session from URL tokens - only run once
   useEffect(() => {
+    // Prevent running multiple times
+    if (hasVerified) return;
+    
     const verifySession = async () => {
+      setHasVerified(true); // Mark as verified to prevent re-runs
+      
       try {
         console.log('[ResetPassword] Params:', params);
+        console.log('[ResetPassword] access_token present:', !!params.access_token);
+        console.log('[ResetPassword] refresh_token present:', !!params.refresh_token);
         
         const accessToken = params.access_token as string | undefined;
         const refreshToken = params.refresh_token as string | undefined;
 
         if (accessToken && refreshToken) {
+          console.log('[ResetPassword] Setting session with tokens...');
+          
           // Set the session with the tokens from the URL
-          const { error } = await supabase.auth.setSession({
+          const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
@@ -72,13 +82,18 @@ export default function ResetPasswordScreen() {
             return;
           }
 
+          console.log('[ResetPassword] Session set successfully for:', data?.user?.email);
           setSessionReady(true);
         } else {
-          // Check if user already has an active recovery session
+          // Check if user already has an active session (might have been set by _layout.tsx)
+          console.log('[ResetPassword] No tokens in params, checking existing session...');
           const { data: { session } } = await supabase.auth.getSession();
+          
           if (session) {
+            console.log('[ResetPassword] Found existing session for:', session.user?.email);
             setSessionReady(true);
           } else {
+            console.log('[ResetPassword] No session found');
             Alert.alert(
               'Invalid Link',
               'This password reset link is invalid. Please request a new one.',
@@ -95,7 +110,7 @@ export default function ResetPasswordScreen() {
     };
 
     verifySession();
-  }, [params]);
+  }, [hasVerified]); // Only depend on hasVerified flag
 
   const handleResetPassword = async () => {
     if (!password.trim()) {
@@ -116,13 +131,33 @@ export default function ResetPasswordScreen() {
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.auth.updateUser({
+      // Check current session before update
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('[ResetPassword] Current session before update:', session?.user?.email);
+      
+      if (!session) {
+        Alert.alert('Session Expired', 'Your session has expired. Please request a new password reset link.');
+        router.replace('/forgot-password');
+        return;
+      }
+
+      // Update the password
+      console.log('[ResetPassword] Attempting to update password...');
+      const { data, error } = await supabase.auth.updateUser({
         password: password,
       });
 
+      console.log('[ResetPassword] Update result - data:', data?.user?.email, 'error:', error?.message);
+
       if (error) {
+        console.error('[ResetPassword] Update error:', error);
         Alert.alert('Error', error.message);
       } else {
+        console.log('[ResetPassword] Password updated successfully!');
+        
+        // Sign out to ensure clean state for next login
+        await supabase.auth.signOut();
+        
         Alert.alert(
           'Password Updated! 🎉',
           'Your password has been successfully changed. You can now log in with your new password.',
@@ -130,6 +165,7 @@ export default function ResetPasswordScreen() {
         );
       }
     } catch (error) {
+      console.error('[ResetPassword] Exception:', error);
       Alert.alert('Error', 'Failed to update password. Please try again.');
     } finally {
       setIsLoading(false);

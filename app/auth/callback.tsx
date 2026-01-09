@@ -90,6 +90,9 @@ export default function AuthCallbackScreen() {
   };
 
   useEffect(() => {
+    let isMounted = true;
+    let loginTimer: NodeJS.Timeout | null = null;
+    
     const handleCallback = async () => {
       try {
         console.log('[Auth Callback] Params from router:', params);
@@ -127,8 +130,10 @@ export default function AuthCallbackScreen() {
         }
 
         // If still no tokens, wait a moment and check again (app might still be loading)
+        if (!isMounted) return;
         await new Promise(resolve => setTimeout(resolve, 500));
         
+        if (!isMounted) return;
         const retryUrl = await Linking.getInitialURL();
         console.log('[Auth Callback] Retry URL:', retryUrl);
         
@@ -136,16 +141,23 @@ export default function AuthCallbackScreen() {
           return;
         }
 
-        // No tokens found - redirect to login after delay
+        // No tokens found - redirect to login after delay (only if still mounted)
+        if (!isMounted) return;
         console.log('[Auth Callback] No tokens found, redirecting to login');
         setStatus('success');
         setMessage('Redirecting to login...');
-        setTimeout(() => router.replace('/login'), 1500);
+        loginTimer = setTimeout(() => {
+          if (isMounted) {
+            router.replace('/login');
+          }
+        }, 1500);
         
       } catch (error) {
         console.error('[Auth Callback] Error:', error);
-        setStatus('error');
-        setMessage('Something went wrong. Please try again.');
+        if (isMounted) {
+          setStatus('error');
+          setMessage('Something went wrong. Please try again.');
+        }
       }
     };
 
@@ -157,7 +169,11 @@ export default function AuthCallbackScreen() {
       processUrl(url);
     });
 
-    return () => subscription.remove();
+    return () => {
+      isMounted = false;
+      if (loginTimer) clearTimeout(loginTimer);
+      subscription.remove();
+    };
   }, [params]);
 
   return (

@@ -72,6 +72,9 @@ function parseSupabaseAuthUrl(url: string): { type?: string; accessToken?: strin
   }
 }
 
+// Track handled URLs to prevent duplicate processing
+let handledUrls = new Set<string>();
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Nunito_400Regular,
@@ -81,40 +84,18 @@ export default function RootLayout() {
 
   // Handle deep links with URL fragments (Supabase auth)
   useEffect(() => {
-    // Handle initial URL (app opened via link)
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        console.log('[DeepLink] Initial URL:', url);
-        const authParams = parseSupabaseAuthUrl(url);
-        if (authParams) {
-          console.log('[DeepLink] Auth params found:', authParams.type);
-          if (authParams.type === 'recovery') {
-            router.replace({
-              pathname: '/reset-password',
-              params: {
-                access_token: authParams.accessToken,
-                refresh_token: authParams.refreshToken,
-              },
-            });
-          } else {
-            router.replace({
-              pathname: '/auth/callback',
-              params: {
-                access_token: authParams.accessToken,
-                refresh_token: authParams.refreshToken,
-                type: authParams.type || '',
-              },
-            });
-          }
-        }
+    const handleAuthUrl = (url: string) => {
+      // Skip if we've already handled this URL
+      if (handledUrls.has(url)) {
+        console.log('[DeepLink] URL already handled, skipping:', url);
+        return;
       }
-    });
-
-    // Handle URL changes while app is open
-    const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.log('[DeepLink] URL event:', url);
+      
       const authParams = parseSupabaseAuthUrl(url);
       if (authParams) {
+        // Mark URL as handled
+        handledUrls.add(url);
+        
         console.log('[DeepLink] Auth params found:', authParams.type);
         if (authParams.type === 'recovery') {
           router.replace({
@@ -135,6 +116,20 @@ export default function RootLayout() {
           });
         }
       }
+    };
+
+    // Handle initial URL (app opened via link)
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        console.log('[DeepLink] Initial URL:', url);
+        handleAuthUrl(url);
+      }
+    });
+
+    // Handle URL changes while app is open
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      console.log('[DeepLink] URL event:', url);
+      handleAuthUrl(url);
     });
 
     return () => subscription.remove();
