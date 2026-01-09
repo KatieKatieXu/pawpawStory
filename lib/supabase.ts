@@ -37,6 +37,7 @@ export function isSupabaseConfigured(): boolean {
  * Uses the app's URL scheme for deep linking
  */
 export function getAuthRedirectUrl(): string {
-  return Linking.createURL('auth/callback');
+  // Use the simple scheme format - no spaces, no extra characters
+  return 'pawpawmobile://auth/callback';
 }
 

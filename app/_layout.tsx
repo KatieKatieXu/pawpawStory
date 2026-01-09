@@ -1,7 +1,8 @@
 import "@/global.css";
 import { Nunito_400Regular, Nunito_700Bold, Nunito_800ExtraBold, useFonts } from '@expo-google-fonts/nunito';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import * as Linking from 'expo-linking';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -48,12 +49,96 @@ function RootLayoutContent() {
   );
 }
 
+// Parse URL fragments from Supabase auth links
+function parseSupabaseAuthUrl(url: string): { type?: string; accessToken?: string; refreshToken?: string } | null {
+  try {
+    // Supabase sends tokens in URL fragment: #access_token=...&refresh_token=...&type=recovery
+    const hashIndex = url.indexOf('#');
+    if (hashIndex === -1) return null;
+    
+    const fragment = url.substring(hashIndex + 1);
+    const params = new URLSearchParams(fragment);
+    
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const type = params.get('type');
+    
+    if (accessToken && refreshToken) {
+      return { type: type || undefined, accessToken, refreshToken };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Nunito_400Regular,
     Nunito_700Bold,
     Nunito_800ExtraBold,
   });
+
+  // Handle deep links with URL fragments (Supabase auth)
+  useEffect(() => {
+    // Handle initial URL (app opened via link)
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        console.log('[DeepLink] Initial URL:', url);
+        const authParams = parseSupabaseAuthUrl(url);
+        if (authParams) {
+          console.log('[DeepLink] Auth params found:', authParams.type);
+          if (authParams.type === 'recovery') {
+            router.replace({
+              pathname: '/reset-password',
+              params: {
+                access_token: authParams.accessToken,
+                refresh_token: authParams.refreshToken,
+              },
+            });
+          } else {
+            router.replace({
+              pathname: '/auth/callback',
+              params: {
+                access_token: authParams.accessToken,
+                refresh_token: authParams.refreshToken,
+                type: authParams.type || '',
+              },
+            });
+          }
+        }
+      }
+    });
+
+    // Handle URL changes while app is open
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      console.log('[DeepLink] URL event:', url);
+      const authParams = parseSupabaseAuthUrl(url);
+      if (authParams) {
+        console.log('[DeepLink] Auth params found:', authParams.type);
+        if (authParams.type === 'recovery') {
+          router.replace({
+            pathname: '/reset-password',
+            params: {
+              access_token: authParams.accessToken,
+              refresh_token: authParams.refreshToken,
+            },
+          });
+        } else {
+          router.replace({
+            pathname: '/auth/callback',
+            params: {
+              access_token: authParams.accessToken,
+              refresh_token: authParams.refreshToken,
+              type: authParams.type || '',
+            },
+          });
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded) {
