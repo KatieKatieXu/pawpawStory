@@ -12,6 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { useAuth } from '@/contexts/AuthContext';
 import { SavedVoice, useSavedVoices } from '@/contexts/SavedVoicesContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cloneVoice, isApiKeyConfigured } from '@/services/VoiceCloningService';
@@ -25,6 +26,7 @@ const sampleScript = {
 export default function RecordScreen() {
   const { isDayMode } = useTheme();
   const isNightMode = !isDayMode;
+  const { isAuthenticated } = useAuth();
   
   // Use shared saved voices context
   const { savedVoices, addVoice, removeVoice } = useSavedVoices();
@@ -266,6 +268,16 @@ export default function RecordScreen() {
   // Handle save from modal - now calls ElevenLabs API
   const handleSaveVoice = async () => {
     if (!tempRecordingUri || voiceName.trim() === '') return;
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Sign In Required',
+        'Please sign in to save your voice recordings. Your recordings will be stored in your account.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
 
     // Check if API key is configured
     if (!isApiKeyConfigured()) {

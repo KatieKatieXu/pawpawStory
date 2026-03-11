@@ -100,7 +100,7 @@ export function SavedVoicesProvider({ children }: { children: ReactNode }) {
   const addVoice = async (voice: SavedVoice) => {
     if (!user) {
       console.error('[SavedVoices] Cannot save voice: user not authenticated');
-      return;
+      throw new Error('Please sign in to save your voice recordings');
     }
 
     try {
