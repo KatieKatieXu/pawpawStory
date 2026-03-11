@@ -188,6 +188,12 @@ export default function RecordScreen() {
     }
 
     try {
+      // Ensure audio mode is set for recording (may have been changed by playback)
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
       const recording = new Audio.Recording();
       await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       await recording.startAsync();
@@ -358,6 +364,11 @@ export default function RecordScreen() {
           soundRef.current = null;
         }
         setPlayingVoiceId(null);
+        // Reset audio mode for recording after manual stop
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
         return;
       }
 
@@ -366,6 +377,7 @@ export default function RecordScreen() {
         await soundRef.current.stopAsync();
         await soundRef.current.unloadAsync();
         soundRef.current = null;
+        setPlayingVoiceId(null);
       }
 
       // Set audio mode for playback - use speaker for louder output
