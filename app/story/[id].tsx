@@ -84,7 +84,7 @@ export default function StoryDetailScreen() {
 
   // Check if this story is favorited
   const isStoryFavorite = storyId ? isFavorite(storyId) : false;
-  const [speed, setSpeed] = useState<1 | 1.25 | 1.5 | 2>(1);
+  const [speed, setSpeed] = useState<0.8 | 0.9 | 1>(1);
 
   // Audio state
   const soundRef = useRef<Audio.Sound | null>(null);
@@ -352,7 +352,7 @@ export default function StoryDetailScreen() {
   };
 
   const handleToggleSpeed = () => {
-    setSpeed((s) => (s === 1 ? 1.25 : s === 1.25 ? 1.5 : s === 1.5 ? 2 : 1));
+    setSpeed((s) => (s === 0.8 ? 0.9 : s === 0.9 ? 1 : 0.8));
   };
 
   if (!story) return <StoryNotFound />;
@@ -462,10 +462,25 @@ export default function StoryDetailScreen() {
               </View>
             </Pressable>
 
-            {/* Buttons row: Play (center) / Favorite (right) */}
+            {/* Buttons row: Speed (left) / Play (center) / Favorite (right) */}
             <View className="flex-row items-center justify-between mt-6">
-              {/* Empty spacer for left side */}
-              <View className="w-14 h-14" />
+              {/* Speed button */}
+              <Pressable
+                onPress={handleToggleSpeed}
+                className={`w-14 h-14 rounded-2xl items-center justify-center ${
+                  isNightMode ? 'bg-pawpaw-navyLight/80' : 'bg-[#e3d9cf]'
+                }`}
+              >
+                <Text 
+                  className={isNightMode ? 'text-pawpaw-white' : 'text-[#3d3630]'} 
+                  style={{ fontFamily: 'Nunito_700Bold', fontSize: 14 }}
+                >
+                  {speed}x
+                </Text>
+                <Text className={`${secondaryText} text-[10px]`} style={{ fontFamily: 'Nunito_400Regular' }}>
+                  Speed
+                </Text>
+              </Pressable>
 
               <View className="items-center">
                 <Pressable

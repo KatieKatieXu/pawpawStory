@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Animated, {
@@ -180,6 +181,19 @@ export default function RecordScreen() {
   };
 
   const handleStartRecording = async () => {
+    // Check if user is authenticated before recording
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Sign In Required',
+        'Please sign in to record and save your voice. Your recordings will be stored in your account for use across all your stories.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => router.push('/login') },
+        ]
+      );
+      return;
+    }
+
     if (!hasPermission) {
       // Try to request permission again with actionable dialog
       const granted = await requestMicrophonePermission();

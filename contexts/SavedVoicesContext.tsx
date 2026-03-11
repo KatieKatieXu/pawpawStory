@@ -3,8 +3,11 @@
  * 
  * Provides shared state for saved voices across the app.
  * Syncs voices with Supabase for cross-device persistence.
+ * Uploads recordings to Supabase Storage for playback across devices.
  */
 
+import * as FileSystem from 'expo-file-system/legacy';
+import { decode } from 'base64-arraybuffer';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 import { supabase } from '@/lib/supabase';
@@ -17,8 +20,9 @@ export interface SavedVoice {
   name: string;
   duration: string;
   date: string;
-  uri: string;
+  uri: string; // Local URI (for newly recorded) or remote URL (from storage)
   voiceId?: string; // ElevenLabs voice_id
+  recordingUrl?: string; // Supabase Storage URL
 }
 
 // Database row type (matches Supabase table)
@@ -28,6 +32,7 @@ interface SavedVoiceRow {
   name: string;
   duration: string;
   voice_id: string | null;
+  recording_url: string | null;
   created_at: string;
 }
 
@@ -53,8 +58,9 @@ export function SavedVoicesProvider({ children }: { children: ReactNode }) {
     name: row.name,
     duration: row.duration,
     date: new Date(row.created_at).toLocaleDateString(),
-    uri: '', // URI is local-only, not stored in DB
+    uri: row.recording_url || '', // Use storage URL for playback
     voiceId: row.voice_id || undefined,
+    recordingUrl: row.recording_url || undefined,
   });
 
   // Fetch voices from Supabase
@@ -96,6 +102,43 @@ export function SavedVoicesProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, user, fetchVoices]);
 
+  // Upload recording to Supabase Storage
+  const uploadRecording = async (localUri: string, fileName: string): Promise<string> => {
+    try {
+      console.log('[SavedVoices] Uploading recording:', fileName);
+      
+      // Read file as base64
+      const base64 = await FileSystem.readAsStringAsync(localUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      // Upload to Supabase Storage
+      const filePath = `${user!.id}/${fileName}.m4a`;
+      const { data, error } = await supabase.storage
+        .from('voice-recordings')
+        .upload(filePath, decode(base64), {
+          contentType: 'audio/m4a',
+          upsert: true,
+        });
+
+      if (error) {
+        console.error('[SavedVoices] Upload error:', error.message);
+        throw error;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('voice-recordings')
+        .getPublicUrl(filePath);
+
+      console.log('[SavedVoices] Upload successful:', urlData.publicUrl);
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('[SavedVoices] Upload failed:', error);
+      throw error;
+    }
+  };
+
   // Add a voice (save to Supabase)
   const addVoice = async (voice: SavedVoice) => {
     if (!user) {
@@ -104,6 +147,13 @@ export function SavedVoicesProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      // Upload recording to Storage first
+      let recordingUrl: string | null = null;
+      if (voice.uri) {
+        recordingUrl = await uploadRecording(voice.uri, voice.id);
+      }
+
+      // Save metadata to database
       const { error } = await supabase
         .from('saved_voices')
         .insert({
@@ -112,6 +162,7 @@ export function SavedVoicesProvider({ children }: { children: ReactNode }) {
           name: voice.name,
           duration: voice.duration,
           voice_id: voice.voiceId || null,
+          recording_url: recordingUrl,
         });
 
       if (error) {
@@ -119,8 +170,13 @@ export function SavedVoicesProvider({ children }: { children: ReactNode }) {
         throw error;
       }
 
-      // Add to local state immediately for responsiveness
-      setSavedVoices((prev) => [voice, ...prev]);
+      // Add to local state with the storage URL
+      const savedVoice: SavedVoice = {
+        ...voice,
+        uri: recordingUrl || voice.uri,
+        recordingUrl: recordingUrl || undefined,
+      };
+      setSavedVoices((prev) => [savedVoice, ...prev]);
       console.log('[SavedVoices] Voice saved successfully:', voice.name);
     } catch (error) {
       console.error('[SavedVoices] Error:', error);
@@ -128,11 +184,19 @@ export function SavedVoicesProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Remove a voice (delete from Supabase)
+  // Remove a voice (delete from Supabase + Storage)
   const removeVoice = async (id: string) => {
     if (!user) return;
 
     try {
+      // Delete from Storage first
+      const filePath = `${user.id}/${id}.m4a`;
+      await supabase.storage
+        .from('voice-recordings')
+        .remove([filePath]);
+      console.log('[SavedVoices] Recording deleted from storage');
+
+      // Delete from database
       const { error } = await supabase
         .from('saved_voices')
         .delete()
